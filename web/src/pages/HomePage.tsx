@@ -1,17 +1,18 @@
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
-import type { Members, Problem } from '../types';
-import { Link } from 'react-router-dom';
+import { sortedMemberEntries } from '../services/github';
+import type { Members, Problem, Activities } from '../types';
 
 interface Context {
   members: Members;
   problems: Problem[];
+  activities: Activities;
   dark: boolean;
 }
 
 export default function HomePage() {
-  const { members, problems } = useOutletContext<Context>();
+  const { members, problems, activities } = useOutletContext<Context>();
 
   const recentProblems = problems.slice(0, 8);
 
@@ -35,12 +36,13 @@ export default function HomePage() {
       <section>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">팀원</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(members).map(([id, member]) => (
+          {sortedMemberEntries(members).map(([id, member]) => (
             <MemberCard
               key={id}
               id={id}
               member={member}
               problemCount={problems.filter((p) => p.member === id).length}
+              streak={activities[id]?.streak}
             />
           ))}
         </div>
@@ -63,7 +65,7 @@ export default function HomePage() {
               <Link
                 key={p.id}
                 to={`/problem/${p.member}/${p.week}/${p.name}`}
-                className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+                className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                   p.source === 'swea' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :

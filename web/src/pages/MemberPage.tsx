@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
+import { Flame } from 'lucide-react';
 import FilterChips from '../components/FilterChips';
-import type { Members, Problem } from '../types';
+import ActivityHeatmap from '../components/ActivityHeatmap';
+import type { Members, Problem, Activities } from '../types';
 
 interface Context {
   members: Members;
   problems: Problem[];
+  activities: Activities;
   dark: boolean;
 }
 
 export default function MemberPage() {
   const { id } = useParams<{ id: string }>();
-  const { members, problems } = useOutletContext<Context>();
+  const { members, problems, activities } = useOutletContext<Context>();
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Set<string>>(new Set());
 
@@ -75,8 +78,19 @@ export default function MemberPage() {
             {sourceStats.boj > 0 && <span>BOJ {sourceStats.boj}</span>}
             {sourceStats.etc > 0 && <span>기타 {sourceStats.etc}</span>}
           </div>
+          {activities[id] && activities[id].streak > 0 && (
+            <div className="flex items-center gap-1 mt-1 text-orange-500 dark:text-orange-400">
+              <Flame className="w-4 h-4" />
+              <span className="text-sm font-semibold">{activities[id].streak}일 연속</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* 활동 히트맵 */}
+      {activities[id] && (
+        <ActivityHeatmap dates={activities[id].dates} />
+      )}
 
       {/* 필터 */}
       <FilterChips active={sourceFilter} onChange={setSourceFilter} />
@@ -93,7 +107,7 @@ export default function MemberPage() {
               <div key={week} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <button
                   onClick={() => toggleWeek(week)}
-                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   <span className="font-medium text-slate-900 dark:text-slate-100">{week}</span>
                   <div className="flex items-center gap-2">
@@ -112,7 +126,7 @@ export default function MemberPage() {
                       <Link
                         key={p.id}
                         to={`/problem/${p.member}/${p.week}/${p.name}`}
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                       >
                         <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                           p.source === 'swea' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :

@@ -9,7 +9,7 @@ import WeeklyPage from './pages/WeeklyPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
-  const { members, problems, weeks, loading, error } = useGitHub();
+  const { members, problems, weeks, activities, loading, error } = useGitHub();
 
   if (loading) {
     return (
@@ -42,6 +42,7 @@ export default function App() {
               members={members}
               problems={problems}
               weeks={weeks}
+              activities={activities}
               dark={dark}
               toggleTheme={toggle}
             />

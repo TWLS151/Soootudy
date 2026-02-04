@@ -1,10 +1,11 @@
-import type { Members, Problem, GitHubTreeResponse, GitHubTreeItem } from '../types';
+import type { Members, Problem, GitHubTreeResponse, GitHubTreeItem, Activities } from '../types';
 
 const REPO_OWNER = 'TWLS151';
 const REPO_NAME = 'Sootudy';
 const API_BASE = 'https://api.github.com';
 const CACHE_KEY_TREE = 'sootudy_tree';
 const CACHE_KEY_MEMBERS = 'sootudy_members';
+const CACHE_KEY_ACTIVITY = 'sootudy_activity';
 const CACHE_TTL = 5 * 60 * 1000; // 5분
 
 interface CacheEntry<T> {
@@ -96,7 +97,9 @@ export async function fetchMembers(): Promise<Members> {
     const res = await fetch(`${API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/contents/members.json`);
     if (!res.ok) throw new Error(`Failed to fetch members.json: ${res.status}`);
     const data = await res.json();
-    const content = atob(data.content);
+    const binary = atob(data.content);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    const content = new TextDecoder('utf-8').decode(bytes);
     const members: Members = JSON.parse(content);
     setCache(CACHE_KEY_MEMBERS, members);
     return members;
@@ -185,7 +188,134 @@ export function parseProblemsFromTree(tree: GitHubTreeItem[], members: Members):
   });
 }
 
+export function sortedMemberEntries(members: Members): [string, Members[string]][] {
+  return Object.entries(members).sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko'));
+}
+
 export function extractWeeks(problems: Problem[]): string[] {
   const weeks = new Set(problems.map((p) => p.week));
   return Array.from(weeks).sort((a, b) => b.localeCompare(a));
+}
+
+// --- 커밋 활동 & 스트릭 ---
+
+function toKSTDateStr(isoDate: string): string {
+  const utc = new Date(isoDate);
+  const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
+  const y = kst.getFullYear();
+  const m = String(kst.getMonth() + 1).padStart(2, '0');
+  const d = String(kst.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function isWeekend(date: Date): boolean {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+function getPreviousWeekday(date: Date): Date {
+  const prev = new Date(date);
+  prev.setDate(prev.getDate() - 1);
+  while (isWeekend(prev)) {
+    prev.setDate(prev.getDate() - 1);
+  }
+  return prev;
+}
+
+export function calculateStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+  const dateSet = new Set(dates);
+
+  // KST 기준 오늘
+  const now = new Date();
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  let current = new Date(kstNow);
+  current.setHours(0, 0, 0, 0);
+
+  // 주말이면 직전 평일로 이동
+  while (isWeekend(current)) {
+    current = getPreviousWeekday(current);
+  }
+
+  // 오늘(또는 직전 평일)에 활동이 없으면 전날 평일 확인
+  if (!dateSet.has(toDateStr(current))) {
+    current = getPreviousWeekday(current);
+    if (!dateSet.has(toDateStr(current))) {
+      return 0;
+    }
+  }
+
+  let streak = 0;
+  while (dateSet.has(toDateStr(current))) {
+    streak++;
+    current = getPreviousWeekday(current);
+  }
+
+  return streak;
+}
+
+export async function fetchCommitActivity(members: Members): Promise<Activities> {
+  const cached = getCache<Activities>(CACHE_KEY_ACTIVITY);
+  if (cached) return cached;
+
+  const since = new Date();
+  since.setDate(since.getDate() - 84); // ~12주
+
+  let commits: any[] = [];
+  try {
+    let res: Response;
+    if (import.meta.env.DEV) {
+      // 개발 환경: 직접 GitHub API 호출
+      res = await fetch(
+        `${API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/commits?per_page=100&since=${since.toISOString()}`
+      );
+    } else {
+      // 프로덕션: Vercel serverless function 사용
+      res = await fetch(`/api/commits?per_page=100&since=${since.toISOString()}`);
+    }
+    if (res.ok) {
+      commits = await res.json();
+    }
+  } catch {
+    console.warn('커밋 데이터 로드 실패');
+  }
+
+  // GitHub username → member ID 매핑
+  const githubToMember: Record<string, string> = {};
+  for (const [id, member] of Object.entries(members)) {
+    githubToMember[member.github.toLowerCase()] = id;
+  }
+
+  // 멤버별 커밋 날짜 그룹핑 (KST 기준)
+  const memberDates: Record<string, Set<string>> = {};
+  for (const commit of commits) {
+    const login = commit.author?.login?.toLowerCase();
+    if (!login) continue;
+    const memberId = githubToMember[login];
+    if (!memberId) continue;
+
+    const date = toKSTDateStr(commit.commit.author.date);
+    if (!memberDates[memberId]) memberDates[memberId] = new Set();
+    memberDates[memberId].add(date);
+  }
+
+  // 스트릭 계산 및 결과 구성
+  const activities: Activities = {};
+  for (const id of Object.keys(members)) {
+    const dates = memberDates[id] ? Array.from(memberDates[id]).sort() : [];
+    activities[id] = {
+      dates,
+      streak: calculateStreak(dates),
+    };
+  }
+
+  setCache(CACHE_KEY_ACTIVITY, activities);
+  return activities;
 }
