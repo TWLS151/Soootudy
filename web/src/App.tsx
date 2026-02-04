@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useTheme } from './hooks/useTheme';
 import { useGitHub } from './hooks/useGitHub';
+import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
+import LoginGate from './components/LoginGate';
 import HomePage from './pages/HomePage';
 import MemberPage from './pages/MemberPage';
 import ProblemPage from './pages/ProblemPage';
@@ -9,7 +11,12 @@ import WeeklyPage from './pages/WeeklyPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
+  const auth = useAuth();
   const { members, problems, weeks, activities, loading, error } = useGitHub();
+
+  if (!auth.authed) {
+    return <LoginGate error={auth.error} loading={auth.loading} onSubmit={auth.login} dark={dark} />;
+  }
 
   if (loading) {
     return (
