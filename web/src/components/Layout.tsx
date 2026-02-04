@@ -33,9 +33,17 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
         </button>
 
         {/* 로고 */}
-        <Link to="/" className="text-lg font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
-          Sootudy
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link to="/" className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            Sootudy
+          </Link>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 cursor-help"
+            title="베타 버전 (2026.02.05 - 02.12)"
+          >
+            BETA
+          </span>
+        </div>
 
         {/* 검색바 */}
         <div className="flex-1 flex justify-center">

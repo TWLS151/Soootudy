@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
+import { X } from 'lucide-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
 import SourceBadge from '../components/SourceBadge';
@@ -14,11 +16,41 @@ interface Context {
 
 export default function HomePage() {
   const { members, problems, activities } = useOutletContext<Context>();
+  const [bannerClosed, setBannerClosed] = useState(() => {
+    return sessionStorage.getItem('betaBannerClosed') === 'true';
+  });
 
   const recentProblems = problems.slice(0, 8);
 
+  const closeBanner = () => {
+    setBannerClosed(true);
+    sessionStorage.setItem('betaBannerClosed', 'true');
+  };
+
   return (
     <div className="space-y-8">
+      {/* 베타 피드백 배너 */}
+      {!bannerClosed && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
+          <span className="text-2xl">🚧</span>
+          <div className="flex-1 text-sm">
+            <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+              베타 버전 운영 중 (2/5 - 2/12)
+            </p>
+            <p className="text-blue-700 dark:text-blue-300">
+              웹사이트에서 이상한 점이나 추가했으면 하는 기능이 있다면 장수철에게 알려주세요!
+            </p>
+          </div>
+          <button
+            onClick={closeBanner}
+            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 transition-colors"
+            aria-label="배너 닫기"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Hero */}
       <div className="text-center py-8">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Sootudy</h1>
