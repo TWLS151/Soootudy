@@ -3,17 +3,18 @@ import { Link, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import SearchBar from './SearchBar';
 import ThemeToggle from './ThemeToggle';
-import type { Members, Problem } from '../types';
+import type { Members, Problem, Activities } from '../types';
 
 interface LayoutProps {
   members: Members;
   problems: Problem[];
   weeks: string[];
+  activities: Activities;
   dark: boolean;
   toggleTheme: () => void;
 }
 
-export default function Layout({ members, problems, weeks, dark, toggleTheme }: LayoutProps) {
+export default function Layout({ members, problems, weeks, activities, dark, toggleTheme }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -55,7 +56,7 @@ export default function Layout({ members, problems, weeks, dark, toggleTheme }: 
       {/* 메인 콘텐츠 */}
       <main className="pt-16 lg:pl-64">
         <div className="p-6 max-w-5xl mx-auto">
-          <Outlet context={{ members, problems, weeks, dark }} />
+          <Outlet context={{ members, problems, weeks, activities, dark }} />
         </div>
       </main>
     </div>

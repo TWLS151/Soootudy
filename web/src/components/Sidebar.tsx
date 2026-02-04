@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { sortedMemberEntries } from '../services/github';
 import type { Members } from '../types';
 
 interface SidebarProps {
@@ -31,7 +32,7 @@ export default function Sidebar({ members, weeks, open, onClose }: SidebarProps)
             팀원
           </h2>
           <ul className="space-y-1 mb-6">
-            {Object.entries(members).map(([id, member]) => (
+            {sortedMemberEntries(members).map(([id, member]) => (
               <li key={id}>
                 <Link
                   to={`/member/${id}`}

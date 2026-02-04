@@ -39,10 +39,20 @@ export interface GitHubTreeResponse {
   truncated: boolean;
 }
 
+export interface MemberActivity {
+  dates: string[]; // YYYY-MM-DD format, sorted
+  streak: number;
+}
+
+export interface Activities {
+  [memberId: string]: MemberActivity;
+}
+
 export interface AppData {
   members: Members;
   problems: Problem[];
   weeks: string[];
+  activities: Activities;
   loading: boolean;
   error: string | null;
 }

@@ -1,5 +1,7 @@
 # Sootudy
 
+[![Sootudy Site](https://img.shields.io/badge/Live%20Site-sootudy.vercel.app-4F46E5?style=for-the-badge)](https://sootudy.vercel.app/)
+
 15기 서울 1반 스터디 저장소입니다.
 
 ## 📋 프로젝트 소개
