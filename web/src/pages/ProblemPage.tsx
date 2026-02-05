@@ -190,7 +190,7 @@ export default function ProblemPage() {
 
         {/* 댓글 섹션 (40%) */}
         <div className="md:w-[40%]">
-          <Comments problemId={problem.id} dark={dark} />
+          <Comments problemId={problem.id} />
         </div>
       </div>
 

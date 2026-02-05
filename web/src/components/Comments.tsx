@@ -5,10 +5,9 @@ import type { Comment } from '../types';
 
 interface CommentsProps {
   problemId: string;
-  dark: boolean;
 }
 
-export default function Comments({ problemId, dark }: CommentsProps) {
+export default function Comments({ problemId }: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);

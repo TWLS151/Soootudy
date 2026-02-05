@@ -104,7 +104,6 @@ export default function Sidebar({ members, weeks, open, onClose }: SidebarProps)
                 <li key={id}>
                   <Link
                     to={`/member/${id}`}
-                    onClick={onClose}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       isActive(`/member/${id}`)
                         ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
@@ -143,7 +142,6 @@ export default function Sidebar({ members, weeks, open, onClose }: SidebarProps)
                           <li key={week}>
                             <Link
                               to={`/weekly/${week}`}
-                              onClick={onClose}
                               className={`block px-3 py-1.5 rounded-lg text-sm transition-colors ${
                                 isActive(`/weekly/${week}`)
                                   ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
