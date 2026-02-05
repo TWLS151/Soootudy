@@ -11,6 +11,7 @@ import MemberCommentsPage from './pages/MemberCommentsPage';
 import ProblemPage from './pages/ProblemPage';
 import WeeklyPage from './pages/WeeklyPage';
 import LabPage from './pages/LabPage';
+import SubmitPage from './pages/SubmitPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="problem/:memberId/:week/:problemName" element={<ProblemPage />} />
           <Route path="weekly/:week" element={<WeeklyPage />} />
           <Route path="lab" element={<LabPage />} />
+          <Route path="submit" element={<SubmitPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

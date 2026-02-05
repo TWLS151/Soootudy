@@ -1,0 +1,192 @@
+import { createClient } from '@supabase/supabase-js';
+
+const OWNER = 'TWLS151';
+const REPO = 'Sootudy';
+
+function getCurrentWeek(): string {
+  const now = new Date();
+  // KST (UTC+9)
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const year = kst.getUTCFullYear() % 100;
+  const month = kst.getUTCMonth() + 1;
+  const date = kst.getUTCDate();
+  const weekNum = Math.ceil(date / 7);
+
+  const yy = String(year).padStart(2, '0');
+  const mm = String(month).padStart(2, '0');
+  return `${yy}-${mm}-w${weekNum}`;
+}
+
+export default async function handler(req: any, res: any) {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // --- Auth ---
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '인증이 필요합니다.' });
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const githubPat = process.env.GITHUB_PAT;
+
+  if (!supabaseUrl || !supabaseServiceKey || !githubPat) {
+    return res.status(500).json({ error: '서버 설정 오류' });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(authHeader.slice(7));
+
+  if (authError || !user) {
+    return res.status(401).json({ error: '인증에 실패했습니다.' });
+  }
+
+  const githubUsername =
+    user.user_metadata?.user_name || user.user_metadata?.preferred_username;
+  if (!githubUsername) {
+    return res.status(401).json({ error: 'GitHub 사용자명을 찾을 수 없습니다.' });
+  }
+
+  // --- Fetch members.json ---
+  const membersRes = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/contents/members.json`,
+    {
+      headers: {
+        Authorization: `token ${githubPat}`,
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'Sootudy-Web',
+      },
+    },
+  );
+
+  if (!membersRes.ok) {
+    return res.status(500).json({ error: '멤버 정보를 가져올 수 없습니다.' });
+  }
+
+  const membersData = await membersRes.json();
+  const membersContent = Buffer.from(membersData.content, 'base64').toString(
+    'utf-8',
+  );
+  const members: Record<string, { name: string; github: string }> =
+    JSON.parse(membersContent);
+
+  // Find memberId by GitHub username
+  let memberId: string | null = null;
+  for (const [id, member] of Object.entries(members)) {
+    if (member.github.toLowerCase() === githubUsername.toLowerCase()) {
+      memberId = id;
+      break;
+    }
+  }
+
+  if (!memberId) {
+    return res.status(403).json({ error: '팀원만 코드를 제출할 수 있습니다.' });
+  }
+
+  // --- Validate input ---
+  const { source, problemNumber, code, overwrite = false } = req.body || {};
+
+  if (!source || !problemNumber || !code) {
+    return res
+      .status(400)
+      .json({ error: '출처, 문제번호, 코드를 모두 입력해주세요.' });
+  }
+  if (!['swea', 'boj'].includes(source)) {
+    return res
+      .status(400)
+      .json({ error: '출처는 "swea" 또는 "boj"만 가능합니다.' });
+  }
+  if (!/^\d+$/.test(String(problemNumber))) {
+    return res.status(400).json({ error: '문제번호는 숫자만 입력 가능합니다.' });
+  }
+  if (typeof code !== 'string' || code.trim().length === 0) {
+    return res.status(400).json({ error: '코드를 입력해주세요.' });
+  }
+
+  // --- Build path ---
+  const week = getCurrentWeek();
+  const name = `${source}-${problemNumber}`;
+  const filePath = `${memberId}/${week}/${name}.py`;
+
+  // --- Check existing file ---
+  const checkRes = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${filePath}`,
+    {
+      headers: {
+        Authorization: `token ${githubPat}`,
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'Sootudy-Web',
+      },
+    },
+  );
+
+  let existingSha: string | undefined;
+  if (checkRes.ok) {
+    if (!overwrite) {
+      return res.status(409).json({
+        error: '이미 같은 파일이 존재합니다.',
+        path: filePath,
+      });
+    }
+    const existing = await checkRes.json();
+    existingSha = existing.sha;
+  }
+
+  // --- Push to GitHub ---
+  const content = Buffer.from(code, 'utf-8').toString('base64');
+  const commitMessage = existingSha
+    ? `Update ${name} by ${members[memberId].name}`
+    : `Add ${name} by ${members[memberId].name}`;
+
+  const putBody: Record<string, unknown> = {
+    message: commitMessage,
+    content,
+  };
+  if (existingSha) {
+    putBody.sha = existingSha;
+  }
+
+  const putRes = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${filePath}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `token ${githubPat}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'Sootudy-Web',
+      },
+      body: JSON.stringify(putBody),
+    },
+  );
+
+  if (!putRes.ok) {
+    const errData = await putRes.json().catch(() => ({}));
+    return res.status(500).json({
+      error: `GitHub API 오류: ${putRes.status}`,
+      details: errData.message,
+    });
+  }
+
+  return res.status(201).json({
+    success: true,
+    path: filePath,
+    memberId,
+    week,
+    name,
+  });
+}

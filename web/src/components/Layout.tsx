@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical, Upload } from 'lucide-react';
 import Sidebar from './Sidebar';
 import SearchBar from './SearchBar';
 import ThemeToggle from './ThemeToggle';
@@ -52,6 +52,15 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
 
         {/* 다크모드 토글 */}
         <ThemeToggle dark={dark} toggle={toggleTheme} />
+
+        {/* 제출 */}
+        <Link
+          to="/submit"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+        >
+          <Upload className="w-5 h-5" />
+          <span className="text-sm font-medium hidden sm:inline">제출</span>
+        </Link>
 
         {/* 실험실 */}
         <Link
