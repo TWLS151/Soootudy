@@ -1,53 +1,62 @@
-import { useState, useCallback } from 'react';
-
-const AUTH_KEY = 'sootudy_auth';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1');
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const login = useCallback(async (password: string) => {
+  useEffect(() => {
+    // 초기 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // 인증 상태 변경 감지
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loginWithGitHub = useCallback(async () => {
     setError('');
     setLoading(true);
 
     try {
-      if (import.meta.env.DEV) {
-        // 개발 환경: VITE_SITE_PASSWORD 또는 무조건 통과
-        const devPw = import.meta.env.VITE_SITE_PASSWORD;
-        if (!devPw || password === devPw) {
-          sessionStorage.setItem(AUTH_KEY, '1');
-          setAuthed(true);
-          return;
-        }
-        setError('비밀번호가 틀렸습니다.');
-        return;
-      }
-
-      // 프로덕션: serverless function 호출
-      const res = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.origin,
+        },
       });
 
-      if (res.ok) {
-        sessionStorage.setItem(AUTH_KEY, '1');
-        setAuthed(true);
-      } else {
-        setError('비밀번호가 틀렸습니다.');
+      if (error) {
+        setError(error.message);
       }
-    } catch {
-      setError('인증 서버에 연결할 수 없습니다.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '로그인 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem(AUTH_KEY);
-    setAuthed(false);
+  const logout = useCallback(async () => {
+    setError('');
+    await supabase.auth.signOut();
   }, []);
 
-  return { authed, error, loading, login, logout };
+  return {
+    user,
+    authed: !!user,
+    loading,
+    error,
+    loginWithGitHub,
+    logout,
+  };
 }

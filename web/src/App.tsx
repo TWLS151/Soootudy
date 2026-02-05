@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useTheme } from './hooks/useTheme';
 import { useGitHub } from './hooks/useGitHub';
@@ -6,6 +7,7 @@ import Layout from './components/Layout';
 import LoginGate from './components/LoginGate';
 import HomePage from './pages/HomePage';
 import MemberPage from './pages/MemberPage';
+import MemberCommentsPage from './pages/MemberCommentsPage';
 import ProblemPage from './pages/ProblemPage';
 import WeeklyPage from './pages/WeeklyPage';
 import LabPage from './pages/LabPage';
@@ -15,8 +17,26 @@ export default function App() {
   const auth = useAuth();
   const { members, problems, weeks, activities, loading, error } = useGitHub();
 
+  // 팀원 확인 로직
+  useEffect(() => {
+    if (auth.user && Object.keys(members).length > 0) {
+      const githubUsername = auth.user.user_metadata?.user_name || auth.user.user_metadata?.preferred_username;
+
+      // members 목록에서 해당 사용자 찾기
+      const isMember = Object.values(members).some(
+        (member) => member.github.toLowerCase() === githubUsername?.toLowerCase()
+      );
+
+      if (!isMember) {
+        // 팀원이 아니면 로그아웃
+        auth.logout();
+        alert('팀원만 접근할 수 있습니다.');
+      }
+    }
+  }, [auth.user, members, auth.logout]);
+
   if (!auth.authed) {
-    return <LoginGate error={auth.error} loading={auth.loading} onSubmit={auth.login} dark={dark} />;
+    return <LoginGate error={auth.error} loading={auth.loading} onLoginWithGitHub={auth.loginWithGitHub} dark={dark} />;
   }
 
   if (loading) {
@@ -58,6 +78,7 @@ export default function App() {
         >
           <Route index element={<HomePage />} />
           <Route path="member/:id" element={<MemberPage />} />
+          <Route path="member/:id/comments" element={<MemberCommentsPage />} />
           <Route path="problem/:memberId/:week/:problemName" element={<ProblemPage />} />
           <Route path="weekly/:week" element={<WeeklyPage />} />
           <Route path="lab" element={<LabPage />} />

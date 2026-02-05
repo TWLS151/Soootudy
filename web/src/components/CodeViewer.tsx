@@ -9,7 +9,7 @@ interface CodeViewerProps {
 
 export default function CodeViewer({ code, language = 'python', dark = false }: CodeViewerProps) {
   return (
-    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 min-h-[500px]">
       <SyntaxHighlighter
         language={language}
         style={dark ? oneDark : oneLight}
