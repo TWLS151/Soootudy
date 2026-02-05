@@ -16,6 +16,7 @@ export interface Problem {
   path: string;
   hasNote: boolean;
   notePath?: string;
+  difficulty?: string; // e.g., "D1", "D2" for SWEA, "골드", "실버" for BOJ, "미정" as default
 }
 
 export interface FileContent {
@@ -55,4 +56,26 @@ export interface AppData {
   activities: Activities;
   loading: boolean;
   error: string | null;
+}
+
+export interface Comment {
+  id: string;
+  problem_id: string;
+  user_id: string;
+  github_username: string;
+  github_avatar: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyProblem {
+  id: string;
+  date: string;
+  source: 'swea' | 'boj' | 'etc';
+  problem_number: string;
+  problem_title: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }

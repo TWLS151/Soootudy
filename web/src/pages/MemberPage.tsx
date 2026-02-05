@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { Flame } from 'lucide-react';
+import { Flame, MessageSquare } from 'lucide-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import type { Members, Problem, Activities } from '../types';
@@ -56,35 +56,44 @@ export default function MemberPage() {
   return (
     <div className="space-y-6">
       {/* 프로필 헤더 */}
-      <div className="flex items-center gap-5">
-        <img
-          src={`https://github.com/${member.github}.png?size=128`}
-          alt={member.name}
-          className="w-16 h-16 rounded-full"
-        />
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{member.name}</h1>
-          <a
-            href={`https://github.com/${member.github}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            @{member.github}
-          </a>
-          <div className="flex gap-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span>총 {memberProblems.length}문제</span>
-            {sourceStats.swea > 0 && <span>SWEA {sourceStats.swea}</span>}
-            {sourceStats.boj > 0 && <span>BOJ {sourceStats.boj}</span>}
-            {sourceStats.etc > 0 && <span>기타 {sourceStats.etc}</span>}
-          </div>
-          {activities[id] && activities[id].streak > 0 && (
-            <div className="flex items-center gap-1 mt-1 text-orange-500 dark:text-orange-400">
-              <Flame className="w-4 h-4" />
-              <span className="text-sm font-semibold">{activities[id].streak}일 연속</span>
+      <div className="flex items-start justify-between gap-5">
+        <div className="flex items-center gap-5">
+          <img
+            src={`https://github.com/${member.github}.png?size=128`}
+            alt={member.name}
+            className="w-16 h-16 rounded-full"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{member.name}</h1>
+            <a
+              href={`https://github.com/${member.github}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              @{member.github}
+            </a>
+            <div className="flex gap-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <span>총 {memberProblems.length}문제</span>
+              {sourceStats.swea > 0 && <span>SWEA {sourceStats.swea}</span>}
+              {sourceStats.boj > 0 && <span>BOJ {sourceStats.boj}</span>}
+              {sourceStats.etc > 0 && <span>기타 {sourceStats.etc}</span>}
             </div>
-          )}
+            {activities[id] && activities[id].streak > 0 && (
+              <div className="flex items-center gap-1 mt-1 text-orange-500 dark:text-orange-400">
+                <Flame className="w-4 h-4" />
+                <span className="text-sm font-semibold">{activities[id].streak}일 연속</span>
+              </div>
+            )}
+          </div>
         </div>
+        <Link
+          to={`/member/${id}/comments`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <MessageSquare className="w-4 h-4" />
+          댓글 모아보기
+        </Link>
       </div>
 
       {/* 활동 히트맵 */}

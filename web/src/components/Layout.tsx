@@ -56,10 +56,10 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
         {/* 실험실 */}
         <Link
           to="/lab"
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          title="실험실"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
         >
           <FlaskConical className="w-5 h-5" />
+          <span className="text-sm font-medium hidden sm:inline">실험실</span>
         </Link>
       </header>
 
