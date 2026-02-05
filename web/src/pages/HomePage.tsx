@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import MemberCard from '../components/MemberCard';
