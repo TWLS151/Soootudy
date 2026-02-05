@@ -38,7 +38,16 @@ function getPreviousWeekday(date: Date): Date {
 
 export function calculateStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
-  const dateSet = new Set(dates);
+
+  // 2026-02-05 이후의 날짜만 필터링
+  const startDate = new Date('2026-02-05T00:00:00+09:00');
+  const filteredDates = dates.filter(date => {
+    const d = new Date(date + 'T00:00:00+09:00');
+    return d >= startDate;
+  });
+
+  if (filteredDates.length === 0) return 0;
+  const dateSet = new Set(filteredDates);
 
   const now = new Date();
   const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -60,6 +69,9 @@ export function calculateStreak(dates: string[]): number {
   while (dateSet.has(toDateStr(current))) {
     streak++;
     current = getPreviousWeekday(current);
+
+    // startDate 이전으로는 가지 않음
+    if (current < startDate) break;
   }
 
   return streak;

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { Flame, MessageSquare } from 'lucide-react';
+import { Flame, MessageSquare, Calendar } from 'lucide-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import type { Members, Problem, Activities } from '../types';
@@ -53,6 +53,16 @@ export default function MemberPage() {
     etc: memberProblems.filter((p) => p.source === 'etc').length,
   };
 
+  // 2/5 이후 누적 출석일수 계산
+  const totalAttendance = useMemo(() => {
+    if (!id || !activities[id]) return 0;
+    const startDate = new Date('2026-02-05T00:00:00+09:00');
+    return activities[id].dates.filter(date => {
+      const d = new Date(date + 'T00:00:00+09:00');
+      return d >= startDate;
+    }).length;
+  }, [id, activities]);
+
   return (
     <div className="space-y-6">
       {/* 프로필 헤더 */}
@@ -79,12 +89,20 @@ export default function MemberPage() {
               {sourceStats.boj > 0 && <span>BOJ {sourceStats.boj}</span>}
               {sourceStats.etc > 0 && <span>기타 {sourceStats.etc}</span>}
             </div>
-            {activities[id] && activities[id].streak > 0 && (
-              <div className="flex items-center gap-1 mt-1 text-orange-500 dark:text-orange-400">
-                <Flame className="w-4 h-4" />
-                <span className="text-sm font-semibold">{activities[id].streak}일 연속</span>
-              </div>
-            )}
+            <div className="flex items-center gap-3 mt-1">
+              {activities[id] && activities[id].streak > 0 && (
+                <div className="flex items-center gap-1 text-orange-500 dark:text-orange-400">
+                  <Flame className="w-4 h-4" />
+                  <span className="text-sm font-semibold">{activities[id].streak}일 연속</span>
+                </div>
+              )}
+              {totalAttendance > 0 && (
+                <div className="flex items-center gap-1 text-indigo-500 dark:text-indigo-400">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm font-semibold">{totalAttendance}일 출석</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <Link
