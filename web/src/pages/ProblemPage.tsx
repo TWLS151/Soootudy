@@ -47,11 +47,25 @@ export default function ProblemPage() {
   useEffect(() => {
     async function resolveMember() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const githubUsername = user.user_metadata?.user_name || user.user_metadata?.preferred_username;
-      if (!githubUsername) return;
+      if (!user) {
+        console.log('[ProblemPage] No user logged in');
+        return;
+      }
+      console.log('[ProblemPage] user_metadata:', user.user_metadata);
+      // GitHub OAuth에서 username은 user_name, preferred_username, 또는 login으로 올 수 있음
+      const githubUsername = user.user_metadata?.user_name
+        || user.user_metadata?.preferred_username
+        || user.user_metadata?.login
+        || user.user_metadata?.nickname;
+      console.log('[ProblemPage] Resolved GitHub username:', githubUsername);
+      if (!githubUsername) {
+        console.log('[ProblemPage] No GitHub username found in metadata');
+        return;
+      }
       for (const [id, m] of Object.entries(members)) {
+        console.log(`[ProblemPage] Comparing: "${m.github.toLowerCase()}" vs "${githubUsername.toLowerCase()}"`);
         if (m.github.toLowerCase() === githubUsername.toLowerCase()) {
+          console.log('[ProblemPage] Match found! Setting currentMemberId:', id);
           setCurrentMemberId(id);
           break;
         }
