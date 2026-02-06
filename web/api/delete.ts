@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const OWNER = 'TWLS151';
-const REPO = 'Sootudy';
+const REPO = 'Soootudy';
 
 export default async function handler(req: any, res: any) {
   // CORS

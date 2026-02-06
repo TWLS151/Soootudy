@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const OWNER = 'TWLS151';
-const REPO = 'Sootudy';
+const REPO = 'Soootudy';
 
 function getCurrentWeek(): string {
   const now = new Date();

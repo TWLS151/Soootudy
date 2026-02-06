@@ -6,7 +6,7 @@ export { parseSource, parseSourceFromCode, parseProblemsFromTree, sortedMemberEn
 export { calculateStreak, fetchCommitActivity } from './activity';
 
 const REPO_OWNER = 'TWLS151';
-const REPO_NAME = 'Sootudy';
+const REPO_NAME = 'Soootudy';
 const API_BASE = 'https://api.github.com';
 const CACHE_KEY_TREE = 'sootudy_tree';
 const CACHE_KEY_MEMBERS = 'sootudy_members';

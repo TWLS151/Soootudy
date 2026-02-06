@@ -2,7 +2,7 @@ export default async function handler(req: any, res: any) {
   const token = process.env.GITHUB_TOKEN;
   const { per_page = '100', since } = req.query;
 
-  const url = new URL('https://api.github.com/repos/TWLS151/Sootudy/commits');
+  const url = new URL('https://api.github.com/repos/TWLS151/Soootudy/commits');
   url.searchParams.set('per_page', String(per_page));
   if (since) url.searchParams.set('since', String(since));
 

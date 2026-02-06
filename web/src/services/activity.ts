@@ -2,7 +2,7 @@ import type { Members, Activities } from '../types';
 import { getCache, setCache } from './cache';
 
 const REPO_OWNER = 'TWLS151';
-const REPO_NAME = 'Sootudy';
+const REPO_NAME = 'Soootudy';
 const API_BASE = 'https://api.github.com';
 const CACHE_KEY_ACTIVITY = 'sootudy_activity';
 
