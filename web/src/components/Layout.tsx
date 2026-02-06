@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { FlaskConical, Upload } from 'lucide-react';
+import { FlaskConical, Upload, PanelLeftClose, PanelLeft } from 'lucide-react';
 import Sidebar from './Sidebar';
 import SearchBar from './SearchBar';
 import ThemeToggle from './ThemeToggle';
@@ -17,6 +17,7 @@ interface LayoutProps {
 
 export default function Layout({ members, problems, weeks, activities, dark, toggleTheme }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -30,6 +31,15 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
           <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
+        </button>
+
+        {/* 사이드바 토글 (데스크톱) */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+          title={sidebarCollapsed ? '사이드바 열기' : '사이드바 닫기'}
+        >
+          {sidebarCollapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
         </button>
 
         {/* 로고 */}
@@ -77,11 +87,12 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
         members={members}
         weeks={weeks}
         open={sidebarOpen}
+        collapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
       />
 
       {/* 메인 콘텐츠 */}
-      <main className="pt-16 lg:pl-64">
+      <main className="pt-16">
         <div className="p-6 max-w-5xl mx-auto">
           <Outlet context={{ members, problems, weeks, activities, dark }} />
         </div>

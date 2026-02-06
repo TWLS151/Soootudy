@@ -8,6 +8,7 @@ interface SidebarProps {
   members: Members;
   weeks: string[];
   open: boolean;
+  collapsed: boolean;
   onClose: () => void;
 }
 
@@ -35,7 +36,7 @@ function groupWeeksByMonth(weeks: string[]): { month: string; label: string; wee
     });
 }
 
-export default function Sidebar({ members, weeks, open, onClose }: SidebarProps) {
+export default function Sidebar({ members, weeks, open, collapsed, onClose }: SidebarProps) {
   const location = useLocation();
   const [tab, setTab] = useState<Tab>('members');
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -68,9 +69,9 @@ export default function Sidebar({ members, weeks, open, onClose }: SidebarProps)
       )}
 
       <aside
-        className={`fixed top-16 left-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 overflow-y-auto z-50 transition-transform lg:translate-x-0 ${
+        className={`fixed top-16 left-0 bottom-0 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 overflow-y-auto z-50 transition-transform ${
           open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${collapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
       >
         {/* 탭 */}
         <div className="flex border-b border-slate-200 dark:border-slate-700">
