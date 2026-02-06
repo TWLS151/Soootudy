@@ -15,7 +15,7 @@ export default function LoginGate({ error, loading, onLoginWithGitHub, dark }: L
           <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-950 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Github className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Sootudy</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Soootudy</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">팀원 전용 코드 리뷰 플랫폼</p>
         </div>
 

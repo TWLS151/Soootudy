@@ -181,7 +181,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className="text-center py-8">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Sootudy</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Soootudy</h1>
         <p className="text-slate-500 dark:text-slate-400">SSAFY 15기 서울 1반 알고리즘 스터디</p>
         <div className="flex justify-center gap-6 mt-4 text-sm">
           <span className="text-slate-600 dark:text-slate-300">
