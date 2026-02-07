@@ -17,7 +17,7 @@ interface LayoutProps {
 
 export default function Layout({ members, problems, weeks, activities, dark, toggleTheme }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

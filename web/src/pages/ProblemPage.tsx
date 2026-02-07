@@ -4,7 +4,7 @@ import CodeViewer from '../components/CodeViewer';
 import MarkdownViewer from '../components/MarkdownViewer';
 import SourceBadge from '../components/SourceBadge';
 import Comments from '../components/Comments';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X } from 'lucide-react';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown } from 'lucide-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
 import type { Members, Problem } from '../types';
@@ -35,6 +35,11 @@ export default function ProblemPage() {
   const [compareWith, setCompareWith] = useState<Problem | null>(null);
   const [compareCode, setCompareCode] = useState<string | null>(null);
   const [compareLoading, setCompareLoading] = useState(false);
+
+  // 다른 풀이에서 멤버별 선택된 버전
+  const [selectedVersions, setSelectedVersions] = useState<Record<string, string>>({});
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
@@ -78,6 +83,9 @@ export default function ProblemPage() {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -201,6 +209,39 @@ export default function ProblemPage() {
       return true;
     });
   }, [problems, problem.baseName, problem.name, problem.id]);
+
+  // 멤버별로 그룹핑
+  const groupedSolutions = useMemo(() => {
+    const groups: Record<string, Problem[]> = {};
+    for (const sol of otherSolutions) {
+      if (!groups[sol.member]) {
+        groups[sol.member] = [];
+      }
+      groups[sol.member].push(sol);
+    }
+    // 각 그룹 내에서 버전순 정렬 (원본 → v1 → v2 ...)
+    for (const memberId of Object.keys(groups)) {
+      groups[memberId].sort((a, b) => {
+        const vA = a.version ?? 0;
+        const vB = b.version ?? 0;
+        return vA - vB;
+      });
+    }
+    return groups;
+  }, [otherSolutions]);
+
+  // 멤버별 선택된 버전 가져오기 (기본값: 최신 버전)
+  function getSelectedProblem(mId: string): Problem | undefined {
+    const versions = groupedSolutions[mId];
+    if (!versions || versions.length === 0) return undefined;
+    const selectedId = selectedVersions[mId];
+    if (selectedId) {
+      const found = versions.find((p) => p.id === selectedId);
+      if (found) return found;
+    }
+    // 기본값: 최신 버전 (마지막)
+    return versions[versions.length - 1];
+  }
 
   const compareMember = compareWith ? members[compareWith.member] : null;
 
@@ -379,31 +420,88 @@ export default function ProblemPage() {
                 <div className="space-y-3">
                   <h2 className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                     <Users className="w-4 h-4" />
-                    다른 풀이 ({otherSolutions.length})
+                    다른 풀이 ({Object.keys(groupedSolutions).length}명)
                   </h2>
-                  <div className="flex flex-wrap gap-2">
-                    {otherSolutions.map((sol) => {
-                      const solMember = members[sol.member];
+                  <div className="flex flex-wrap gap-2" ref={dropdownRef}>
+                    {Object.entries(groupedSolutions).map(([mId, versions]) => {
+                      const solMember = members[mId];
                       if (!solMember) return null;
-                      const isSameMember = sol.member === memberId;
+                      const selectedProblem = getSelectedProblem(mId);
+                      if (!selectedProblem) return null;
+                      const hasMultipleVersions = versions.length > 1;
+                      const isSameMember = mId === memberId;
+
+                      // 버전 표시 텍스트
+                      const getVersionLabel = (p: Problem) => {
+                        if (p.version === undefined) return '원본';
+                        return `v${p.version}`;
+                      };
+
                       return (
-                        <div key={sol.id} className="flex items-center gap-1">
-                          <Link
-                            to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
-                            className="flex items-center gap-2 px-3 py-2 rounded-l-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                          >
-                            <img
-                              src={`https://github.com/${solMember.github}.png?size=24`}
-                              alt={solMember.name}
-                              className="w-5 h-5 rounded-full"
-                            />
-                            <span className="text-sm text-slate-700 dark:text-slate-300">
-                              {isSameMember && sol.version ? `v${sol.version}` : solMember.name}
-                            </span>
-                            <span className="text-xs text-slate-400 dark:text-slate-500">{sol.week}</span>
-                          </Link>
+                        <div key={mId} className="flex items-center">
+                          {/* 이름 + 버전 드롭다운 */}
+                          <div className="relative flex items-center">
+                            <Link
+                              to={`/problem/${mId}/${selectedProblem.week}/${selectedProblem.name}`}
+                              className="flex items-center gap-2 px-3 py-2 rounded-l-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                            >
+                              <img
+                                src={`https://github.com/${solMember.github}.png?size=24`}
+                                alt={solMember.name}
+                                className="w-5 h-5 rounded-full"
+                              />
+                              <span className="text-sm text-slate-700 dark:text-slate-300">
+                                {isSameMember ? getVersionLabel(selectedProblem) : solMember.name}
+                              </span>
+                            </Link>
+
+                            {/* 버전 드롭다운 (여러 버전일 때만) */}
+                            {hasMultipleVersions && (
+                              <>
+                                <button
+                                  onClick={() => setOpenDropdown(openDropdown === mId ? null : mId)}
+                                  className="flex items-center gap-1 px-2 py-2 bg-white dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"
+                                  title="버전 선택"
+                                >
+                                  <span className="text-xs">{getVersionLabel(selectedProblem)}</span>
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
+
+                                {openDropdown === mId && (
+                                  <div className="absolute left-0 top-full mt-1 z-20 min-w-[100px] rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-1">
+                                    {versions.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        onClick={() => {
+                                          setSelectedVersions((prev) => ({ ...prev, [mId]: v.id }));
+                                          setOpenDropdown(null);
+                                        }}
+                                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
+                                          v.id === selectedProblem.id
+                                            ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                                            : 'text-slate-700 dark:text-slate-300'
+                                        }`}
+                                      >
+                                        {getVersionLabel(v)}
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">{v.week}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {/* 주차 표시 (버전이 1개일 때만) */}
+                            {!hasMultipleVersions && (
+                              <span className="px-2 py-2 text-xs text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700">
+                                {selectedProblem.week}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 비교 버튼 */}
                           <button
-                            onClick={() => setCompareWith(sol)}
+                            onClick={() => setCompareWith(selectedProblem)}
                             className="px-2 py-2 rounded-r-lg bg-slate-100 dark:bg-slate-700 border border-l-0 border-slate-200 dark:border-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                             title="비교하기"
                           >
