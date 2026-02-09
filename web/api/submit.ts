@@ -111,9 +111,9 @@ export default async function handler(req: any, res: any) {
       .json({ error: '출처는 "swea", "boj", "etc"만 가능합니다.' });
   }
   if (source === 'etc') {
-    // 기타: 한글(자모+완성형), 영문, 숫자, 하이픈만 허용
-    if (!/^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9-]+$/.test(String(problemNumber))) {
-      return res.status(400).json({ error: '문제 이름은 한글, 영문, 숫자, 하이픈만 사용 가능합니다.' });
+    // 기타: 한글(자모+완성형), 영문, 숫자, 하이픈, 띄어쓰기 허용
+    if (!/^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]+$/.test(String(problemNumber))) {
+      return res.status(400).json({ error: '문제 이름은 한글, 영문, 숫자, 하이픈, 띄어쓰기만 사용 가능합니다.' });
     }
   } else {
     if (!/^\d+$/.test(String(problemNumber))) {
@@ -125,7 +125,9 @@ export default async function handler(req: any, res: any) {
   }
 
   const week = customWeek || getCurrentWeek();
-  const name = `${source}-${problemNumber}`;
+  // 띄어쓰기 → 언더스코어 변환 (파일명 안전)
+  const safeProblemNumber = source === 'etc' ? String(problemNumber).trim().replace(/ +/g, '_') : String(problemNumber);
+  const name = `${source}-${safeProblemNumber}`;
 
   const author = {
     name: members[memberId].github,

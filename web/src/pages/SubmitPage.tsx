@@ -131,7 +131,8 @@ export default function SubmitPage() {
     if (isEditMode && editParts) {
       return `${editParts.memberId}/${editParts.week}/${editParts.fullName}.py`;
     }
-    return `${memberId}/${displayWeek}/${source}-${problemNumber}-v?.py`;
+    const displayNumber = source === 'etc' ? problemNumber.replace(/ /g, '_') : problemNumber;
+    return `${memberId}/${displayWeek}/${source}-${displayNumber}-v?.py`;
   }, [memberId, displayWeek, source, problemNumber, isEditMode, editParts]);
 
 
@@ -355,13 +356,13 @@ export default function SubmitPage() {
             value={problemNumber}
             onChange={(e) => {
               if (source === 'etc') {
-                // 파일명에 안전한 문자만 허용: 한글(자모+완성형), 영문, 숫자, 하이픈
-                setProblemNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9-]/g, ''));
+                // 파일명에 안전한 문자만 허용: 한글(자모+완성형), 영문, 숫자, 하이픈, 띄어쓰기
+                setProblemNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
               } else {
                 setProblemNumber(e.target.value.replace(/\D/g, ''));
               }
             }}
-            placeholder={source === 'etc' ? '예: 이분탐색연습' : '예: 6001'}
+            placeholder={source === 'etc' ? '예: 이분 탐색 연습' : '예: 6001'}
             disabled={submitting}
             className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
           />
@@ -412,7 +413,7 @@ export default function SubmitPage() {
             {/* 제출 중 오버레이 */}
             {submitting && (
               <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
-                <div className="w-28 h-28">
+                <div className="w-56 h-56">
                   <DotLottieReact src="/pochita.lottie" loop autoplay />
                 </div>
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300 animate-pulse">

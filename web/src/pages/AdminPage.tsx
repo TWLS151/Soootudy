@@ -353,7 +353,7 @@ export default function AdminPage() {
                 value={formNumber}
                 onChange={(e) => {
                   if (formSource === 'etc') {
-                    setFormNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9-]/g, ''));
+                    setFormNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
                   } else {
                     setFormNumber(e.target.value.replace(/\D/g, ''));
                   }
