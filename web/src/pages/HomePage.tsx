@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight } from 'lucide-react';
+import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
@@ -13,6 +13,49 @@ import { useStudyConfig } from '../hooks/useStudyConfig';
 import { useDailyProgress } from '../hooks/useDailyProgress';
 import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities, DailyProblem } from '../types';
+
+const PIGEON_MESSAGES = [
+  '오늘도 화이팅!',
+  '한 문제라도 풀면 승리!',
+  '꾸준함이 실력이다!',
+  '알고리즘은 배신하지 않아!',
+  '오늘의 커밋이 내일의 실력!',
+  '코드 한 줄이 세상을 바꾼다!',
+  '포기하면 거기서 끝이야!',
+  '오늘 안 풀면 내일 두 문제!',
+  '디버깅은 인생의 축소판',
+  'AC 받으면 기분 최고!',
+  '시간 초과? 다시 생각해보자!',
+  '런타임 에러는 성장의 증거!',
+  '어제의 나보다 한 문제 더!',
+  '구구...열심히 하자구구!',
+  '스터디원 모두 파이팅!',
+  '코딩은 마라톤이야!',
+  '풀이 수가 늘어나고 있어!',
+  '오늘도 커밋 찍고 가자!',
+  'WA는 AC의 어머니!',
+  '반례를 찾으면 반은 푼 거야!',
+  '점심 먹고 한 문제 어때?',
+  '구현 문제? 차분하게!',
+  'DP는 점화식만 찾으면 끝!',
+  '그래프 탐색, 넌 할 수 있어!',
+  '이분 탐색의 힘을 믿어!',
+  '그리디하게 살자!',
+  '스택/큐는 기본 중의 기본!',
+  '재귀의 끝에 답이 있다!',
+  '배열 인덱스 조심!',
+  'Off-by-one은 누구나 실수해!',
+  '코드 리뷰는 서로의 성장!',
+  '댓글 달아주면 힘이 돼!',
+  '같이 풀면 더 재밌어!',
+  '수우터디 최고!',
+  '오늘 제출 했어? 구구?',
+  '커피 한 잔, 코드 한 줄!',
+  '집중! 집중! 집중!',
+  '느려도 괜찮아, 멈추지만 마!',
+  '에러 메시지를 잘 읽어봐!',
+  '테스트 케이스를 믿지 마!',
+];
 
 interface Context {
   members: Members;
@@ -34,6 +77,14 @@ export default function HomePage() {
     }
     return null;
   }, [members, githubUsername]);
+
+  // 개인 통계
+  const myProblemCount = useMemo(
+    () => (currentMemberId ? problems.filter((p) => p.member === currentMemberId).length : 0),
+    [problems, currentMemberId]
+  );
+  const myStreak = currentMemberId ? (activities[currentMemberId]?.streak ?? 0) : 0;
+  const [pigeonMessage] = useState(() => PIGEON_MESSAGES[Math.floor(Math.random() * PIGEON_MESSAGES.length)]);
 
   // 일일 진행 상황
   const { config } = useStudyConfig();
@@ -143,18 +194,43 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className="text-center py-8">
-        <div className="w-48 h-48 mx-auto mb-2">
-          <DotLottieReact src="/pigeon.lottie" loop autoplay />
+        {/* 말풍선 + 피전 */}
+        <div className="relative w-48 mx-auto mb-2">
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{pigeonMessage}</p>
+            {/* 말풍선 꼬리 */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700" />
+          </div>
+          <div className="w-48 h-48">
+            <DotLottieReact src="/pigeon.lottie" loop autoplay />
+          </div>
         </div>
+
         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Soootudy</h1>
         <p className="text-slate-500 dark:text-slate-400">SSAFY 15기 서울 1반 알고리즘 스터디</p>
-        <div className="flex justify-center gap-6 mt-4 text-sm">
+
+        {/* 통계 */}
+        <div className="flex justify-center gap-5 mt-4 text-sm">
           <span className="text-slate-600 dark:text-slate-300">
             <strong className="text-indigo-600 dark:text-indigo-400">{Object.keys(members).length}</strong> 팀원
           </span>
           <span className="text-slate-600 dark:text-slate-300">
             <strong className="text-indigo-600 dark:text-indigo-400">{problems.length}</strong> 풀이
           </span>
+          {currentMemberId && (
+            <>
+              <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                <Code2 className="w-3.5 h-3.5 text-indigo-500" />
+                <strong className="text-indigo-600 dark:text-indigo-400">{myProblemCount}</strong> 내 풀이
+              </span>
+              {myStreak > 0 && (
+                <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                  <Flame className="w-3.5 h-3.5 text-orange-500" />
+                  <strong className="text-orange-500 dark:text-orange-400">{myStreak}일</strong> 스트릭
+                </span>
+              )}
+            </>
+          )}
         </div>
       </div>
 
