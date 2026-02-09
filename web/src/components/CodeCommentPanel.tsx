@@ -61,6 +61,7 @@ export default function CodeCommentPanel({
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const replySubmittingRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,7 +101,8 @@ export default function CodeCommentPanel({
   }
 
   async function handleReply(parentComment: Comment) {
-    if (!replyContent.trim() || !parentComment.line_number) return;
+    if (!replyContent.trim() || !parentComment.line_number || replySubmittingRef.current) return;
+    replySubmittingRef.current = true;
     setReplySubmitting(true);
     try {
       await onAddReply(replyContent.trim(), parentComment.line_number, parentComment.id);
@@ -109,6 +111,7 @@ export default function CodeCommentPanel({
     } catch {
       alert('답글 작성에 실패했습니다.');
     } finally {
+      replySubmittingRef.current = false;
       setReplySubmitting(false);
     }
   }

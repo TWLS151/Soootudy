@@ -52,7 +52,11 @@ export default function InlineCommentCard({
 }: InlineCommentCardProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [replyTo, setReplyTo] = useState<string | null>(null);
+  // 기존 댓글이 있으면 첫 댓글에 답글로 기본 설정
+  const [replyTo, setReplyTo] = useState<string | null>(
+    comments.length > 0 ? comments[0].id : null
+  );
+  const submittingRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -80,7 +84,8 @@ export default function InlineCommentCard({
   }, [onClose]);
 
   async function handleSubmit() {
-    if (!content.trim() || submitting) return;
+    if (!content.trim() || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSubmit(content.trim(), replyTo || undefined);
@@ -89,6 +94,7 @@ export default function InlineCommentCard({
     } catch {
       alert('댓글 작성에 실패했습니다.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
