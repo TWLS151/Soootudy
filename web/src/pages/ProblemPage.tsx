@@ -60,7 +60,7 @@ export default function ProblemPage() {
   const isOwner = currentMemberId === memberId;
 
   // 댓글 데이터
-  const commentData = useCodeComments(problem?.id || '');
+  const commentData = useCodeComments(problem?.id || '', members);
 
   // 첫 댓글이 달리면 패널 자동 열림 (딱 한 번만)
   useEffect(() => {

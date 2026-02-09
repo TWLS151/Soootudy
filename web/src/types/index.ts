@@ -85,3 +85,25 @@ export interface DailyProblem {
   created_at: string;
   updated_at: string;
 }
+
+export interface StudyConfig {
+  id: string;
+  required_comments: number;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'comment';
+  actor_github_username: string;
+  actor_avatar: string | null;
+  problem_id: string;
+  problem_member: string;
+  problem_week: string;
+  problem_name: string;
+  comment_preview: string | null;
+  is_read: boolean;
+  created_at: string;
+}

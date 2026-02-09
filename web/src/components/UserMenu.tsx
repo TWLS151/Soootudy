@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, User, Shield, ChevronDown } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, Sun, Moon } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type { Members } from '../types';
 
@@ -8,9 +8,11 @@ interface UserMenuProps {
   user: SupabaseUser;
   members: Members;
   onLogout: () => void;
+  dark: boolean;
+  onToggleTheme: () => void;
 }
 
-export default function UserMenu({ user, members, onLogout }: UserMenuProps) {
+export default function UserMenu({ user, members, onLogout, dark, onToggleTheme }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +97,21 @@ export default function UserMenu({ user, members, onLogout }: UserMenuProps) {
                 관리자
               </Link>
             )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleTheme();
+              }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              {dark ? (
+                <Sun className="w-4 h-4 text-yellow-500" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+              )}
+              {dark ? '라이트 모드' : '다크 모드'}
+            </button>
 
             <button
               onClick={() => {

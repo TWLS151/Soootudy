@@ -19,6 +19,20 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+
+      // user_profiles upsert (알림용 github_username → user_id 매핑)
+      if (session?.user) {
+        const u = session.user;
+        const ghUsername = u.user_metadata?.user_name || u.user_metadata?.preferred_username;
+        if (ghUsername) {
+          supabase
+            .from('user_profiles')
+            .upsert({ user_id: u.id, github_username: ghUsername }, { onConflict: 'user_id' })
+            .then(({ error: upsertError }) => {
+              if (upsertError) console.error('Failed to upsert user_profiles:', upsertError);
+            });
+        }
+      }
     });
 
     return () => subscription.unsubscribe();

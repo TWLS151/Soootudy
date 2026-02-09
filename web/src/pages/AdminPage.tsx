@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { supabase } from '../lib/supabase';
 import { getKSTToday } from '../lib/date';
+import { useStudyConfig } from '../hooks/useStudyConfig';
 import type { Members, Problem, DailyProblem } from '../types';
 import type { User } from '@supabase/supabase-js';
 
@@ -36,6 +37,15 @@ export default function AdminPage() {
       navigate('/', { replace: true });
     }
   }, [isAdmin, members, navigate]);
+
+  // Study config
+  const { config, updateConfig } = useStudyConfig();
+  const [commentCount, setCommentCount] = useState(3);
+  const [configSaving, setConfigSaving] = useState(false);
+
+  useEffect(() => {
+    if (config) setCommentCount(config.required_comments);
+  }, [config]);
 
   // State
   const [allProblems, setAllProblems] = useState<DailyProblem[]>([]);
@@ -209,6 +219,60 @@ export default function AdminPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400">오늘의 문제 관리 및 예약</p>
         </div>
       </div>
+
+      {/* 스터디 설정 */}
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">스터디 설정</h2>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              일일 필수 댓글 수
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              각 팀원이 하루에 작성해야 하는 최소 댓글 수
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCommentCount(Math.max(1, commentCount - 1))}
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
+            >
+              -
+            </button>
+            <span className="w-8 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              {commentCount}
+            </span>
+            <button
+              onClick={() => setCommentCount(commentCount + 1)}
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
+            >
+              +
+            </button>
+            {config && commentCount !== config.required_comments && (
+              <button
+                onClick={async () => {
+                  setConfigSaving(true);
+                  try {
+                    await updateConfig({ required_comments: commentCount });
+                  } catch {
+                    alert('설정 저장에 실패했습니다.');
+                  } finally {
+                    setConfigSaving(false);
+                  }
+                }}
+                disabled={configSaving}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {configSaving ? '저장 중...' : '저장'}
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* 캘린더 뷰 */}
       <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">

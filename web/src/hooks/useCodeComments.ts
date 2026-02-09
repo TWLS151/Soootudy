@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Comment } from '../types';
+import { createCommentNotification } from '../services/notifications';
+import type { Comment, Members } from '../types';
 
 const AUTHOR_COLORS = [
   { dot: '#3b82f6', bgClass: 'bg-blue-50 dark:bg-blue-950/30', borderClass: 'border-blue-200 dark:border-blue-800' },
@@ -26,7 +27,7 @@ export interface CodeCommentUser {
   avatar_url: string;
 }
 
-export function useCodeComments(problemId: string) {
+export function useCodeComments(problemId: string, members?: Members) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<CodeCommentUser | null>(null);
@@ -175,9 +176,21 @@ export function useCodeComments(problemId: string) {
 
       const { error } = await supabase.from('comments').insert(insertData);
       if (error) throw error;
+
+      // 알림 생성 (fire-and-forget)
+      if (members) {
+        createCommentNotification({
+          problemId,
+          actorGithubUsername: user.github_username,
+          actorAvatar: user.avatar_url,
+          commentContent: content.trim(),
+          members,
+        }).catch((err) => console.error('Failed to create notification:', err));
+      }
+
       await loadComments();
     },
-    [user, problemId, loadComments]
+    [user, problemId, loadComments, members]
   );
 
   const updateComment = useCallback(

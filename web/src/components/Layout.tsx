@@ -3,8 +3,9 @@ import { Link, Outlet } from 'react-router-dom';
 import { FlaskConical, Upload, PanelLeftClose, PanelLeft } from 'lucide-react';
 import Sidebar from './Sidebar';
 import SearchBar from './SearchBar';
-import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 import UserMenu from './UserMenu';
+import { useNotifications } from '../hooks/useNotifications';
 import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities } from '../types';
 
@@ -23,6 +24,7 @@ interface LayoutProps {
 export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem, user, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id ?? null);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -65,8 +67,14 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
           <SearchBar problems={problems} members={members} />
         </div>
 
-        {/* 다크모드 토글 */}
-        <ThemeToggle dark={dark} toggle={toggleTheme} />
+        {/* 알림 */}
+        <NotificationBell
+          notifications={notifications}
+          unreadCount={unreadCount}
+          members={members}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+        />
 
         {/* 제출 */}
         <Link
@@ -87,7 +95,7 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
         </Link>
 
         {/* 프로필 메뉴 */}
-        <UserMenu user={user} members={members} onLogout={onLogout} />
+        <UserMenu user={user} members={members} onLogout={onLogout} dark={dark} onToggleTheme={toggleTheme} />
       </header>
 
       {/* 사이드바 */}

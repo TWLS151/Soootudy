@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { X, ExternalLink, Sparkles, Upload, History, ChevronRight } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
 import SourceBadge from '../components/SourceBadge';
+import DailyTaskTracker from '../components/DailyTaskTracker';
 import { sortedMemberEntries, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
 import { getKSTToday } from '../lib/date';
+import { useStudyConfig } from '../hooks/useStudyConfig';
+import { useDailyProgress } from '../hooks/useDailyProgress';
+import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities, DailyProblem } from '../types';
 
 interface Context {
@@ -15,10 +19,25 @@ interface Context {
   problems: Problem[];
   activities: Activities;
   dark: boolean;
+  user: User;
 }
 
 export default function HomePage() {
-  const { members, problems, activities } = useOutletContext<Context>();
+  const { members, problems, activities, user } = useOutletContext<Context>();
+
+  // 현재 유저 정보 해석
+  const githubUsername = user?.user_metadata?.user_name || user?.user_metadata?.preferred_username;
+  const currentMemberId = useMemo(() => {
+    if (!githubUsername) return null;
+    for (const [id, member] of Object.entries(members)) {
+      if (member.github.toLowerCase() === githubUsername.toLowerCase()) return id;
+    }
+    return null;
+  }, [members, githubUsername]);
+
+  // 일일 진행 상황
+  const { config } = useStudyConfig();
+  const { commentCount, loading: progressLoading } = useDailyProgress(githubUsername, currentMemberId);
   const [bannerClosed, setBannerClosed] = useState(() => {
     return sessionStorage.getItem('betaBannerClosed') === 'true';
   });
@@ -244,6 +263,18 @@ export default function HomePage() {
         )}
       </section>
 
+      {/* 오늘의 할 일 */}
+      {!loadingDaily && dailyProblems.length > 0 && (
+        <DailyTaskTracker
+          dailyProblems={dailyProblems}
+          problems={problems}
+          currentMemberId={currentMemberId}
+          commentCount={commentCount}
+          requiredComments={config?.required_comments ?? 3}
+          loading={loadingDaily || progressLoading}
+        />
+      )}
+
       {/* 이전 문제들 */}
       {pastProblems.length > 0 && (
         <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -291,13 +322,17 @@ export default function HomePage() {
                         const solMember = members[sol.member];
                         if (!solMember) return null;
                         return (
-                          <img
+                          <Link
                             key={sol.id}
-                            src={`https://github.com/${solMember.github}.png?size=20`}
-                            alt={solMember.name}
-                            className="w-5 h-5 rounded-full border border-white dark:border-slate-800"
+                            to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
                             title={solMember.name}
-                          />
+                          >
+                            <img
+                              src={`https://github.com/${solMember.github}.png?size=20`}
+                              alt={solMember.name}
+                              className="w-5 h-5 rounded-full border border-white dark:border-slate-800 hover:ring-2 hover:ring-indigo-400 transition-shadow"
+                            />
+                          </Link>
                         );
                       })}
                       {solvers.length > 3 && (
