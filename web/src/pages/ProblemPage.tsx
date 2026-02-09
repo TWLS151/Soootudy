@@ -48,7 +48,8 @@ export default function ProblemPage() {
   const [showDots, setShowDots] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
   const [activeCommentLine, setActiveCommentLine] = useState<number | null>(null);
-  const activeCommentColumnRef = useRef<number | null>(null);
+  const [activeCommentColumn, setActiveCommentColumn] = useState<number>(0);
+  const activeCommentColumnRef = useRef<number>(0);
   const hasAutoOpenedPanel = useRef(false);
 
   const problem = problems.find(
@@ -201,24 +202,37 @@ export default function ProblemPage() {
     return () => { cancelled = true; };
   }, [problem]);
 
-  // 라인 클릭 핸들러
+  // 라인 클릭 핸들러 — 같은 줄+같은 칼럼이면 토글, 다른 칼럼이면 위치만 갱신
   const handleLineClick = useCallback((lineNumber: number, columnNumber: number) => {
-    setActiveCommentLine((prev) => (prev === lineNumber ? null : lineNumber));
+    setActiveCommentLine((prev) => {
+      if (prev === lineNumber && activeCommentColumnRef.current === columnNumber) {
+        return null; // 같은 위치 → 닫기
+      }
+      return lineNumber;
+    });
     activeCommentColumnRef.current = columnNumber;
+    setActiveCommentColumn(columnNumber);
   }, []);
 
-  // 인라인 카드 렌더
+  // 인라인 카드 렌더 — 점 근처 클릭이면 답글, 아니면 새 댓글
   const renderInlineCard = useCallback(
     (lineNumber: number) => {
       const lineComments = commentData.commentsByLine.get(lineNumber) || [];
+      // 클릭한 칼럼이 기존 댓글 점 근처(±2글자)인지 판단
+      const nearbyComment = lineComments.find((c) => {
+        const commentCol = c.column_number ?? 0;
+        return Math.abs(commentCol - activeCommentColumn) <= 2;
+      });
       return (
         <InlineCommentCard
+          key={`${lineNumber}-${activeCommentColumn}`}
           lineNumber={lineNumber}
           comments={lineComments}
           allComments={commentData.comments}
           user={commentData.user}
           members={members}
           authorColorMap={commentData.authorColorMap}
+          initialReplyTo={nearbyComment?.id ?? null}
           onSubmit={async (content, parentId) => {
             await commentData.addComment(content, lineNumber, parentId, activeCommentColumnRef.current ?? undefined);
           }}
@@ -227,7 +241,7 @@ export default function ProblemPage() {
         />
       );
     },
-    [commentData, dark, members]
+    [commentData, dark, members, activeCommentColumn]
   );
 
   if (!problem || !member) {

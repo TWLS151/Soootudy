@@ -10,6 +10,7 @@ interface InlineCommentCardProps {
   user: CodeCommentUser | null;
   members: Members;
   authorColorMap: Map<string, AuthorColor>;
+  initialReplyTo?: string | null;
   onSubmit: (content: string, parentId?: string) => Promise<void>;
   onClose: () => void;
   dark: boolean;
@@ -46,16 +47,15 @@ export default function InlineCommentCard({
   user,
   members,
   authorColorMap,
+  initialReplyTo,
   onSubmit,
   onClose,
   dark,
 }: InlineCommentCardProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // 기존 댓글이 있으면 첫 댓글에 답글로 기본 설정
-  const [replyTo, setReplyTo] = useState<string | null>(
-    comments.length > 0 ? comments[0].id : null
-  );
+  // 점 근처 클릭이면 답글 모드, 아니면 새 댓글 모드
+  const [replyTo, setReplyTo] = useState<string | null>(initialReplyTo ?? null);
   const submittingRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
