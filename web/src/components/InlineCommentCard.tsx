@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, X } from 'lucide-react';
-import type { Comment } from '../types';
+import type { Comment, Members } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
 
 interface InlineCommentCardProps {
@@ -8,6 +8,7 @@ interface InlineCommentCardProps {
   comments: Comment[];
   allComments: Comment[];
   user: CodeCommentUser | null;
+  members: Members;
   authorColorMap: Map<string, AuthorColor>;
   onSubmit: (content: string, parentId?: string) => Promise<void>;
   onClose: () => void;
@@ -29,11 +30,21 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('ko-KR');
 }
 
+function resolveDisplayName(githubUsername: string, members: Members): string {
+  for (const m of Object.values(members)) {
+    if (m.github.toLowerCase() === githubUsername.toLowerCase()) {
+      return m.name;
+    }
+  }
+  return githubUsername;
+}
+
 export default function InlineCommentCard({
   lineNumber,
   comments,
   allComments,
   user,
+  members,
   authorColorMap,
   onSubmit,
   onClose,
@@ -104,69 +115,66 @@ export default function InlineCommentCard({
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-1.5 border-b"
+        className="flex items-center justify-between px-2.5 py-1 border-b"
         style={{
           backgroundColor: dark ? 'rgba(15,23,42,0.5)' : 'rgba(255,255,255,0.7)',
           borderColor: dark ? 'rgba(51,65,85,0.5)' : 'rgba(203,213,225,0.5)',
         }}
       >
-        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
           Line {lineNumber}
         </span>
         <button
           onClick={onClose}
           className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
         >
-          <X className="w-3.5 h-3.5 text-slate-400" />
+          <X className="w-3 h-3 text-slate-400" />
         </button>
       </div>
 
       {/* Existing comments */}
       {comments.length > 0 && (
-        <div className="px-3 py-2 space-y-2.5 max-h-48 overflow-y-auto">
+        <div className="px-2.5 py-1.5 space-y-2 max-h-48 overflow-y-auto">
           {comments.map((comment) => {
             const replies = getReplies(comment.id);
             const color = authorColorMap.get(comment.github_username);
             return (
               <div key={comment.id}>
-                <div className="flex gap-2">
+                <div
+                  className="flex gap-1.5 cursor-pointer"
+                  onClick={() => {
+                    setReplyTo(comment.id);
+                    inputRef.current?.focus();
+                  }}
+                >
                   <img
                     src={
                       comment.github_avatar ||
-                      `https://github.com/${comment.github_username}.png?size=24`
+                      `https://github.com/${comment.github_username}.png?size=20`
                     }
                     alt=""
-                    className="w-5 h-5 rounded-full mt-0.5 flex-shrink-0"
+                    className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <span
-                        className="text-xs font-semibold"
+                        className="text-[11px] font-semibold"
                         style={{ color: color?.dot }}
                       >
-                        {comment.github_username}
+                        {resolveDisplayName(comment.github_username, members)}
                       </span>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500">
                         {formatDate(comment.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words mt-0.5">
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                       {comment.content}
                     </p>
-                    <button
-                      onClick={() => {
-                        setReplyTo(comment.id);
-                        inputRef.current?.focus();
-                      }}
-                      className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline mt-0.5"
-                    >
-                      답글
-                    </button>
                   </div>
                 </div>
                 {/* Replies */}
                 {replies.length > 0 && (
-                  <div className="ml-7 mt-1.5 space-y-1.5 pl-2 border-l-2 border-slate-200 dark:border-slate-600">
+                  <div className="ml-5 mt-1 space-y-1 pl-1.5 border-l-2 border-slate-200 dark:border-slate-600">
                     {replies.map((reply) => {
                       const replyColor = authorColorMap.get(reply.github_username);
                       return (
@@ -174,17 +182,17 @@ export default function InlineCommentCard({
                           <img
                             src={
                               reply.github_avatar ||
-                              `https://github.com/${reply.github_username}.png?size=20`
+                              `https://github.com/${reply.github_username}.png?size=16`
                             }
                             alt=""
-                            className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0"
+                            className="w-3.5 h-3.5 rounded-full mt-0.5 flex-shrink-0"
                           />
                           <div className="min-w-0">
                             <span
                               className="text-[10px] font-semibold"
                               style={{ color: replyColor?.dot }}
                             >
-                              {reply.github_username}
+                              {resolveDisplayName(reply.github_username, members)}
                             </span>
                             <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">
                               {formatDate(reply.created_at)}
@@ -207,7 +215,7 @@ export default function InlineCommentCard({
       {/* Input */}
       {user && (
         <div
-          className="px-3 py-2 border-t"
+          className="px-2.5 py-1.5 border-t"
           style={{
             borderColor: dark ? 'rgba(51,65,85,0.5)' : 'rgba(203,213,225,0.5)',
           }}
@@ -225,15 +233,15 @@ export default function InlineCommentCard({
               </button>
             </div>
           )}
-          <div className="flex gap-2 items-end">
-            <img src={user.avatar_url} alt="" className="w-5 h-5 rounded-full flex-shrink-0" />
+          <div className="flex gap-1.5 items-end">
+            <img src={user.avatar_url} alt="" className="w-4 h-4 rounded-full flex-shrink-0" />
             <textarea
               ref={inputRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder={replyTo ? '답글...' : '댓글...'}
               rows={1}
-              className="flex-1 px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+              className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -247,7 +255,7 @@ export default function InlineCommentCard({
             <button
               onClick={handleSubmit}
               disabled={!content.trim() || submitting}
-              className="p-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white flex-shrink-0"
+              className="p-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white flex-shrink-0"
             >
               <Send className="w-3 h-3" />
             </button>

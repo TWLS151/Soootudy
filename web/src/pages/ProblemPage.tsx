@@ -46,8 +46,9 @@ export default function ProblemPage() {
 
   // 댓글 시스템 상태
   const [showDots, setShowDots] = useState(true);
-  const [showPanel, setShowPanel] = useState(true);
+  const [showPanel, setShowPanel] = useState(false);
   const [activeCommentLine, setActiveCommentLine] = useState<number | null>(null);
+  const hasAutoOpenedPanel = useRef(false);
 
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
@@ -58,6 +59,14 @@ export default function ProblemPage() {
 
   // 댓글 데이터
   const commentData = useCodeComments(problem?.id || '');
+
+  // 첫 댓글이 달리면 패널 자동 열림 (딱 한 번만)
+  useEffect(() => {
+    if (commentData.comments.length > 0 && !hasAutoOpenedPanel.current) {
+      setShowPanel(true);
+      hasAutoOpenedPanel.current = true;
+    }
+  }, [commentData.comments.length]);
 
   // 현재 로그인한 유저의 memberId 찾기
   useEffect(() => {
@@ -206,6 +215,7 @@ export default function ProblemPage() {
           comments={lineComments}
           allComments={commentData.comments}
           user={commentData.user}
+          members={members}
           authorColorMap={commentData.authorColorMap}
           onSubmit={async (content, parentId) => {
             await commentData.addComment(content, lineNumber, parentId);
@@ -215,7 +225,7 @@ export default function ProblemPage() {
         />
       );
     },
-    [commentData, dark]
+    [commentData, dark, members]
   );
 
   if (!problem || !member) {
@@ -612,6 +622,7 @@ export default function ProblemPage() {
                   comments={commentData.comments}
                   loading={commentData.loading}
                   user={commentData.user}
+                  members={members}
                   authorColorMap={commentData.authorColorMap}
                   getReplies={commentData.getReplies}
                   onUpdateComment={commentData.updateComment}

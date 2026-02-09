@@ -10,6 +10,7 @@ interface SidebarProps {
   open: boolean;
   collapsed: boolean;
   onClose: () => void;
+  onNavigate?: () => void;
 }
 
 type Tab = 'members' | 'weeks';
@@ -36,7 +37,7 @@ function groupWeeksByMonth(weeks: string[]): { month: string; label: string; wee
     });
 }
 
-export default function Sidebar({ members, weeks, open, collapsed, onClose }: SidebarProps) {
+export default function Sidebar({ members, weeks, open, collapsed, onClose, onNavigate }: SidebarProps) {
   const location = useLocation();
   const [tab, setTab] = useState<Tab>('members');
   const [openMonths, setOpenMonths] = useState<Set<string>>(new Set());
@@ -105,6 +106,7 @@ export default function Sidebar({ members, weeks, open, collapsed, onClose }: Si
                 <li key={id}>
                   <Link
                     to={`/member/${id}`}
+                    onClick={onNavigate}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       isActive(`/member/${id}`)
                         ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'
@@ -143,6 +145,7 @@ export default function Sidebar({ members, weeks, open, collapsed, onClose }: Si
                           <li key={week}>
                             <Link
                               to={`/weekly/${week}`}
+                              onClick={onNavigate}
                               className={`block px-3 py-1.5 rounded-lg text-sm transition-colors ${
                                 isActive(`/weekly/${week}`)
                                   ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium'

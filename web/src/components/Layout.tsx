@@ -90,6 +90,7 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
         open={sidebarOpen}
         collapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
+        onNavigate={() => { setSidebarOpen(false); setSidebarCollapsed(true); }}
       />
 
       {/* 메인 콘텐츠 */}

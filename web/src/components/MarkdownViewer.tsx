@@ -10,7 +10,7 @@ interface MarkdownViewerProps {
 
 export default function MarkdownViewer({ content, dark = false }: MarkdownViewerProps) {
   return (
-    <div className="prose prose-slate dark:prose-invert max-w-none">
+    <div className={`prose max-w-none ${dark ? 'prose-invert' : 'prose-slate'}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
