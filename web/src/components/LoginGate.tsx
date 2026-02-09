@@ -1,4 +1,5 @@
 import { Github } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 interface LoginGateProps {
   error: string;
@@ -12,8 +13,8 @@ export default function LoginGate({ error, loading, onLoginWithGitHub, dark }: L
     <div className={`min-h-screen flex items-center justify-center ${dark ? 'dark bg-slate-950' : 'bg-slate-50'}`}>
       <div className="w-full max-w-sm px-6">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-950 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Github className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+          <div className="w-32 h-32 mx-auto mb-2">
+            <DotLottieReact src="/bear.lottie" loop autoplay />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Soootudy</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">팀원 전용 코드 리뷰 플랫폼</p>

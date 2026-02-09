@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { X, ExternalLink, Sparkles, Plus, Trash2, Upload, History, ChevronRight } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
 import SourceBadge from '../components/SourceBadge';
@@ -181,6 +182,9 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className="text-center py-8">
+        <div className="w-32 h-32 mx-auto mb-2">
+          <DotLottieReact src="/pigeon.lottie" loop autoplay />
+        </div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Soootudy</h1>
         <p className="text-slate-500 dark:text-slate-400">SSAFY 15기 서울 1반 알고리즘 스터디</p>
         <div className="flex justify-center gap-6 mt-4 text-sm">
