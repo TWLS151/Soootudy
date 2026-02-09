@@ -16,6 +16,7 @@ export type AuthorColor = (typeof AUTHOR_COLORS)[0];
 export interface CommentDot {
   line: number;
   color: string;
+  authorIndex: number; // horizontal offset index within the same line
 }
 
 export interface CodeCommentUser {
@@ -114,16 +115,32 @@ export function useCodeComments(problemId: string) {
     return map;
   }, [comments]);
 
-  // Dots: one per line that has comments, colored by first commenter on that line
+  // Dots: one per unique author per line (includes reply authors too)
   const dots = useMemo<CommentDot[]>(() => {
     const result: CommentDot[] = [];
     for (const [line, lineComments] of commentsByLine) {
-      const firstComment = lineComments[0];
-      const color = authorColorMap.get(firstComment.github_username);
-      result.push({ line, color: color?.dot || '#6366f1' });
+      // Collect all unique authors on this line (top-level + replies)
+      const seenAuthors: string[] = [];
+      for (const comment of lineComments) {
+        if (!seenAuthors.includes(comment.github_username)) {
+          seenAuthors.push(comment.github_username);
+        }
+        // Also check replies
+        const replies = comments.filter((c) => c.parent_id === comment.id);
+        for (const reply of replies) {
+          if (!seenAuthors.includes(reply.github_username)) {
+            seenAuthors.push(reply.github_username);
+          }
+        }
+      }
+      // Create one dot per author
+      seenAuthors.forEach((author, index) => {
+        const color = authorColorMap.get(author);
+        result.push({ line, color: color?.dot || '#6366f1', authorIndex: index });
+      });
     }
     return result;
-  }, [commentsByLine, authorColorMap]);
+  }, [commentsByLine, authorColorMap, comments]);
 
   // Get replies for a specific parent comment
   const getReplies = useCallback(

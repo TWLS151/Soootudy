@@ -74,9 +74,10 @@ export default function CodeViewer({
 
   // Build a Set of lines that have dots for quick lookup
   const dotLines = new Set(commentDots?.map((d) => d.line) || []);
+  const DOT_PADDING = 20; // extra space above lines with comments for dots
 
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-slate-700 relative" ref={containerRef} data-code-container>
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>
       {showHeader && (
         <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 rounded-t-lg">
           {title ? (
@@ -101,7 +102,7 @@ export default function CodeViewer({
           )}
         </div>
       )}
-      <div className="relative">
+      <div className="relative" ref={containerRef}>
         <SyntaxHighlighter
           language={language}
           style={dark ? oneDark : oneLight}
@@ -112,16 +113,14 @@ export default function CodeViewer({
             style: {
               display: 'block',
               cursor: onLineClick ? 'pointer' : undefined,
+              paddingTop:
+                showDots && dotLines.has(lineNumber) ? DOT_PADDING : undefined,
               backgroundColor:
                 activeCommentLine === lineNumber
                   ? dark
                     ? 'rgba(99,102,241,0.15)'
                     : 'rgba(99,102,241,0.08)'
                   : undefined,
-              borderLeft:
-                showDots && dotLines.has(lineNumber)
-                  ? `3px solid ${commentDots?.find((d) => d.line === lineNumber)?.color || '#6366f1'}`
-                  : '3px solid transparent',
             },
             className: onLineClick ? 'code-line-clickable' : '',
             onClick: onLineClick ? () => onLineClick(lineNumber) : undefined,
@@ -136,7 +135,7 @@ export default function CodeViewer({
           {code}
         </SyntaxHighlighter>
 
-        {/* Dot overlay */}
+        {/* Dot overlay — positioned in the paddingTop area above each commented line */}
         {showDots &&
           commentDots &&
           commentDots.length > 0 &&
@@ -145,11 +144,11 @@ export default function CodeViewer({
             if (!pos) return null;
             return (
               <div
-                key={`dot-${dot.line}`}
+                key={`dot-${dot.line}-${dot.authorIndex}`}
                 className="absolute z-10 cursor-pointer transition-transform hover:scale-150"
                 style={{
-                  top: pos.top + pos.height / 2 - 5,
-                  left: 6,
+                  top: pos.top + 5,
+                  left: 52 + dot.authorIndex * 16,
                   width: 10,
                   height: 10,
                   borderRadius: '50%',
@@ -175,8 +174,7 @@ export default function CodeViewer({
               top:
                 (linePositions.get(activeCommentLine)?.top || 0) +
                 (linePositions.get(activeCommentLine)?.height || 0) +
-                4 +
-                (showHeader ? 40 : 0),
+                4,
               left: 48,
               right: 16,
               maxWidth: 400,
