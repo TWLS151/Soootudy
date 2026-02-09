@@ -71,6 +71,7 @@ export interface Comment {
   created_at: string;
   updated_at: string;
   line_number?: number | null;
+  column_number?: number | null;
   parent_id?: string | null;
 }
 

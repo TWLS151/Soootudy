@@ -15,8 +15,9 @@ export type AuthorColor = (typeof AUTHOR_COLORS)[0];
 
 export interface CommentDot {
   line: number;
+  column: number; // character column position
   color: string;
-  authorIndex: number; // horizontal offset index within the same line
+  offsetIndex: number; // offset for overlapping dots at same position
 }
 
 export interface CodeCommentUser {
@@ -115,32 +116,31 @@ export function useCodeComments(problemId: string) {
     return map;
   }, [comments]);
 
-  // Dots: one per unique author per line (includes reply authors too)
+  // Dots: one per unique (line, column, author) — positioned at click column
   const dots = useMemo<CommentDot[]>(() => {
     const result: CommentDot[] = [];
+    const seenKeys = new Set<string>();
+    const positionOffsets = new Map<string, number>();
+
     for (const [line, lineComments] of commentsByLine) {
-      // Collect all unique authors on this line (top-level + replies)
-      const seenAuthors: string[] = [];
       for (const comment of lineComments) {
-        if (!seenAuthors.includes(comment.github_username)) {
-          seenAuthors.push(comment.github_username);
-        }
-        // Also check replies
-        const replies = comments.filter((c) => c.parent_id === comment.id);
-        for (const reply of replies) {
-          if (!seenAuthors.includes(reply.github_username)) {
-            seenAuthors.push(reply.github_username);
-          }
-        }
-      }
-      // Create one dot per author
-      seenAuthors.forEach((author, index) => {
+        const column = comment.column_number ?? 0;
+        const author = comment.github_username;
+        const uniqueKey = `${line}:${column}:${author}`;
+
+        if (seenKeys.has(uniqueKey)) continue;
+        seenKeys.add(uniqueKey);
+
+        const posKey = `${line}:${column}`;
+        const offsetIndex = positionOffsets.get(posKey) || 0;
+        positionOffsets.set(posKey, offsetIndex + 1);
+
         const color = authorColorMap.get(author);
-        result.push({ line, color: color?.dot || '#6366f1', authorIndex: index });
-      });
+        result.push({ line, column, color: color?.dot || '#6366f1', offsetIndex });
+      }
     }
     return result;
-  }, [commentsByLine, authorColorMap, comments]);
+  }, [commentsByLine, authorColorMap]);
 
   // Get replies for a specific parent comment
   const getReplies = useCallback(
@@ -153,7 +153,7 @@ export function useCodeComments(problemId: string) {
   );
 
   const addComment = useCallback(
-    async (content: string, lineNumber: number, parentId?: string) => {
+    async (content: string, lineNumber: number, parentId?: string, columnNumber?: number) => {
       if (!content.trim() || !user) return;
 
       const insertData: Record<string, unknown> = {
@@ -164,6 +164,10 @@ export function useCodeComments(problemId: string) {
         content: content.trim(),
         line_number: lineNumber,
       };
+
+      if (columnNumber != null) {
+        insertData.column_number = columnNumber;
+      }
 
       if (parentId) {
         insertData.parent_id = parentId;

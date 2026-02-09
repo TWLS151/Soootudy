@@ -13,7 +13,7 @@ interface CodeViewerProps {
   expanded?: boolean;
   onToggleExpand?: () => void;
   // Comment integration
-  onLineClick?: (lineNumber: number) => void;
+  onLineClick?: (lineNumber: number, columnNumber: number) => void;
   commentDots?: CommentDot[];
   showDots?: boolean;
   activeCommentLine?: number | null;
@@ -38,6 +38,8 @@ export default function CodeViewer({
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardPosition, setCardPosition] = useState<{ top: number } | null>(null);
+  const [charWidth, setCharWidth] = useState(8.4);
+  const [lineNumWidth, setLineNumWidth] = useState(48);
 
   // Group dots by line for lineProps lookup
   const dotsByLine = useMemo(() => {
@@ -49,6 +51,42 @@ export default function CodeViewer({
     }
     return map;
   }, [commentDots]);
+
+  // Measure character width and line number width after render
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const id = requestAnimationFrame(() => {
+      // Measure monospace char width from <code> element
+      const codeEl = container.querySelector('code');
+      if (codeEl) {
+        const span = document.createElement('span');
+        const cs = getComputedStyle(codeEl);
+        span.style.fontFamily = cs.fontFamily;
+        span.style.fontSize = cs.fontSize;
+        span.style.visibility = 'hidden';
+        span.style.position = 'absolute';
+        span.style.whiteSpace = 'pre';
+        span.textContent = 'X';
+        document.body.appendChild(span);
+        const w = span.getBoundingClientRect().width;
+        document.body.removeChild(span);
+        if (w > 0) setCharWidth(w);
+      }
+
+      // Measure line number element width
+      const lineNumEl = container.querySelector(
+        '.react-syntax-highlighter-line-number'
+      );
+      if (lineNumEl) {
+        const w = (lineNumEl as HTMLElement).getBoundingClientRect().width;
+        if (w > 0) setLineNumWidth(w);
+      }
+    });
+
+    return () => cancelAnimationFrame(id);
+  }, [code]);
 
   // Calculate inline card position when active line changes
   useEffect(() => {
@@ -107,14 +145,16 @@ export default function CodeViewer({
             const lineDots = showDots ? (dotsByLine.get(lineNumber) || []) : [];
             const hasDots = lineDots.length > 0;
 
-            // Render dots as CSS radial-gradient backgrounds
-            // Each dot = 2 layers: colored circle on top, ring underneath
+            // Render dots as CSS radial-gradient at character column positions
             const ringColor = dark ? '#1e293b' : '#ffffff';
             const dotBgs = hasDots
-              ? lineDots.flatMap((dot) => [
-                  `radial-gradient(circle at ${12 + dot.authorIndex * 16}px ${DOT_PADDING / 2}px, ${dot.color} 5px, transparent 5px)`,
-                  `radial-gradient(circle at ${12 + dot.authorIndex * 16}px ${DOT_PADDING / 2}px, ${ringColor} 7px, transparent 7px)`,
-                ])
+              ? lineDots.flatMap((dot) => {
+                  const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
+                  return [
+                    `radial-gradient(circle at ${dotX}px ${DOT_PADDING / 2}px, ${dot.color} 5px, transparent 5px)`,
+                    `radial-gradient(circle at ${dotX}px ${DOT_PADDING / 2}px, ${ringColor} 7px, transparent 7px)`,
+                  ];
+                })
               : [];
 
             return {
@@ -133,7 +173,16 @@ export default function CodeViewer({
                 backgroundRepeat: dotBgs.length > 0 ? 'no-repeat' : undefined,
               },
               className: onLineClick ? 'code-line-clickable' : '',
-              onClick: onLineClick ? () => onLineClick(lineNumber) : undefined,
+              onClick: onLineClick
+                ? (e: React.MouseEvent) => {
+                    const lineEl = e.currentTarget as HTMLElement;
+                    const lineRect = lineEl.getBoundingClientRect();
+                    const codeStartX = lineRect.left + lineNumWidth;
+                    const xOffset = e.clientX - codeStartX;
+                    const column = Math.max(0, Math.round(xOffset / charWidth));
+                    onLineClick(lineNumber, column);
+                  }
+                : undefined,
             };
           }}
           customStyle={{

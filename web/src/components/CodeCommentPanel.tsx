@@ -282,7 +282,7 @@ export default function CodeCommentPanel({
                           </span>
                         </div>
 
-                        <p className="text-slate-700 dark:text-slate-300 text-xs whitespace-pre-wrap break-words">
+                        <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap break-words">
                           {comment.content}
                         </p>
                       </>
@@ -313,7 +313,7 @@ export default function CodeCommentPanel({
                                 <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">
                                   {formatDate(reply.created_at)}
                                 </span>
-                                <p className="text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
+                                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                                   {reply.content}
                                 </p>
                               </div>

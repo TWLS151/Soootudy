@@ -48,6 +48,7 @@ export default function ProblemPage() {
   const [showDots, setShowDots] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
   const [activeCommentLine, setActiveCommentLine] = useState<number | null>(null);
+  const activeCommentColumnRef = useRef<number | null>(null);
   const hasAutoOpenedPanel = useRef(false);
 
   const problem = problems.find(
@@ -201,8 +202,9 @@ export default function ProblemPage() {
   }, [problem]);
 
   // 라인 클릭 핸들러
-  const handleLineClick = useCallback((lineNumber: number) => {
+  const handleLineClick = useCallback((lineNumber: number, columnNumber: number) => {
     setActiveCommentLine((prev) => (prev === lineNumber ? null : lineNumber));
+    activeCommentColumnRef.current = columnNumber;
   }, []);
 
   // 인라인 카드 렌더
@@ -218,7 +220,7 @@ export default function ProblemPage() {
           members={members}
           authorColorMap={commentData.authorColorMap}
           onSubmit={async (content, parentId) => {
-            await commentData.addComment(content, lineNumber, parentId);
+            await commentData.addComment(content, lineNumber, parentId, activeCommentColumnRef.current ?? undefined);
           }}
           onClose={() => setActiveCommentLine(null)}
           dark={dark}
