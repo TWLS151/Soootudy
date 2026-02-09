@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Flame, Trophy, Target, TrendingUp, Grid3x3, Check } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { sortedMemberEntries } from '../services/github';
 import type { Members, Problem, Activities } from '../types';
 
@@ -502,9 +503,11 @@ export default function LabPage() {
           </div>
 
           {filteredProblems.length === 0 && (
-            <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-              <Grid3x3 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400">
+            <div className="flex flex-col items-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="w-24 h-24">
+                <DotLottieReact src="/cat.lottie" loop autoplay />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">
                 필터 조건에 맞는 문제가 없습니다.
               </p>
             </div>

@@ -5,6 +5,7 @@ import MarkdownViewer from '../components/MarkdownViewer';
 import SourceBadge from '../components/SourceBadge';
 import Comments from '../components/Comments';
 import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
 import type { Members, Problem } from '../types';
@@ -193,7 +194,14 @@ export default function ProblemPage() {
   }, [problem]);
 
   if (!problem || !member) {
-    return <p className="text-slate-500 dark:text-slate-400">문제를 찾을 수 없습니다.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="w-28 h-28">
+          <DotLottieReact src="/cat.lottie" loop autoplay />
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">문제를 찾을 수 없습니다.</p>
+      </div>
+    );
   }
 
   const displaySource = (resolvedSource || problem.source) as 'swea' | 'boj' | 'etc';
@@ -339,8 +347,10 @@ export default function ProblemPage() {
               {/* 내 코드 */}
               <div>
                 {loading ? (
-                  <div className="flex items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+                  <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="w-20 h-20">
+                      <DotLottieReact src="/cat.lottie" loop autoplay />
+                    </div>
                   </div>
                 ) : code ? (
                   <CodeViewer code={code} dark={dark} title={member.name} />
@@ -352,8 +362,10 @@ export default function ProblemPage() {
               {/* 비교 대상 코드 */}
               <div>
                 {compareLoading ? (
-                  <div className="flex items-center justify-center py-16 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+                  <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="w-20 h-20">
+                      <DotLottieReact src="/cat.lottie" loop autoplay />
+                    </div>
                   </div>
                 ) : compareCode ? (
                   <CodeViewer
@@ -402,8 +414,11 @@ export default function ProblemPage() {
 
               {/* 콘텐츠 */}
               {loading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-24 h-24">
+                    <DotLottieReact src="/cat.lottie" loop autoplay />
+                  </div>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 animate-pulse">코드를 불러오는 중...</p>
                 </div>
               ) : activeTab === 'code' && code ? (
                 <CodeViewer code={code} dark={dark} expanded={expanded} onToggleExpand={() => setExpanded(!expanded)} />

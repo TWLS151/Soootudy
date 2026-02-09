@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
 import { Flame, MessageSquare, Calendar } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import type { Members, Problem, Activities } from '../types';
@@ -20,7 +21,14 @@ export default function MemberPage() {
 
   const member = id ? members[id] : undefined;
   if (!member || !id) {
-    return <p className="text-slate-500 dark:text-slate-400">팀원을 찾을 수 없습니다.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="w-28 h-28">
+          <DotLottieReact src="/cat.lottie" loop autoplay />
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">팀원을 찾을 수 없습니다.</p>
+      </div>
+    );
   }
 
   const memberProblems = problems.filter((p) => p.member === id);
@@ -124,7 +132,12 @@ export default function MemberPage() {
 
       {/* 주차별 아코디언 */}
       {sortedWeeks.length === 0 ? (
-        <p className="text-slate-500 dark:text-slate-400 text-sm">풀이가 없습니다.</p>
+        <div className="flex flex-col items-center justify-center py-10">
+          <div className="w-24 h-24">
+            <DotLottieReact src="/cat.lottie" loop autoplay />
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">풀이가 없습니다.</p>
+        </div>
       ) : (
         <div className="space-y-2">
           {sortedWeeks.map((week) => {

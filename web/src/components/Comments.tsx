@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Edit2, Trash2, MoreVertical } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { supabase } from '../lib/supabase';
 import type { Comment } from '../types';
 
@@ -180,8 +181,10 @@ export default function Comments({ problemId }: CommentsProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-3 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center py-6">
+        <div className="w-16 h-16">
+          <DotLottieReact src="/cat.lottie" loop autoplay />
+        </div>
       </div>
     );
   }
@@ -233,9 +236,12 @@ export default function Comments({ problemId }: CommentsProps) {
       {/* 댓글 목록 */}
       <div className="space-y-4">
         {comments.length === 0 ? (
-          <p className="text-center text-slate-400 dark:text-slate-500 py-8 text-sm">
-            첫 댓글을 작성해보세요!
-          </p>
+          <div className="flex flex-col items-center py-6">
+            <div className="w-20 h-20">
+              <DotLottieReact src="/cat.lottie" loop autoplay />
+            </div>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">첫 댓글을 작성해보세요!</p>
+          </div>
         ) : (
           comments.map((comment) => (
             <div

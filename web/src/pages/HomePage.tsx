@@ -279,12 +279,17 @@ export default function HomePage() {
 
         {/* 문제 목록 */}
         {loadingDaily ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-3 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="w-20 h-20">
+              <DotLottieReact src="/cat.lottie" loop autoplay />
+            </div>
           </div>
         ) : dailyProblems.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="w-24 h-24">
+              <DotLottieReact src="/cat.lottie" loop autoplay />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               오늘의 문제가 아직 등록되지 않았습니다.
             </p>
           </div>

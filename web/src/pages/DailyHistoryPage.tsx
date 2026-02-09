@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { History, ExternalLink, Upload, Calendar } from 'lucide-react';
+import { History, ExternalLink, Upload } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
@@ -63,8 +64,11 @@ export default function DailyHistoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="w-24 h-24">
+          <DotLottieReact src="/cat.lottie" loop autoplay />
+        </div>
+        <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 animate-pulse">불러오는 중...</p>
       </div>
     );
   }
@@ -85,9 +89,11 @@ export default function DailyHistoryPage() {
       </div>
 
       {groupedByDate.length === 0 ? (
-        <div className="text-center py-16">
-          <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-500 dark:text-slate-400">등록된 문제가 없습니다.</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-28 h-28">
+            <DotLottieReact src="/cat.lottie" loop autoplay />
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">등록된 문제가 없습니다.</p>
         </div>
       ) : (
         <div className="space-y-6">

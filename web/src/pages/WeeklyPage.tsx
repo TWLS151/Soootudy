@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Check, TrendingUp } from 'lucide-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import type { Members, Problem } from '../types';
 
@@ -95,9 +96,11 @@ export default function WeeklyPage() {
             ))}
           </select>
         </div>
-        <div className="text-center py-16">
-          <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-500 dark:text-slate-400">해당 주차에 제출된 풀이가 없습니다.</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-28 h-28">
+            <DotLottieReact src="/cat.lottie" loop autoplay />
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">해당 주차에 제출된 풀이가 없습니다.</p>
         </div>
       </div>
     );
