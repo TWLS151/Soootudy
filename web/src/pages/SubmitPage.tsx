@@ -94,6 +94,7 @@ export default function SubmitPage() {
   const [mascotLottie] = useState(() => MASCOT_LOTTIES[Math.floor(Math.random() * MASCOT_LOTTIES.length)]);
   const [cheerMessage] = useState(() => CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)]);
   const confettiFired = useRef(false);
+  const [editorHeight, setEditorHeight] = useState(300);
 
   const editWeek = editParts?.week;
   const currentWeek = useMemo(() => getCurrentWeek(), []);
@@ -431,11 +432,18 @@ export default function SubmitPage() {
           </label>
           <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
             <Editor
-              height="300px"
+              height={`${editorHeight}px`}
               language="python"
               theme={dark ? 'vs-dark' : 'light'}
               value={code}
               onChange={(value) => setCode(value || '')}
+              onMount={(editor) => {
+                editor.onDidContentSizeChange(() => {
+                  const contentHeight = editor.getContentHeight();
+                  const newHeight = Math.max(300, contentHeight);
+                  setEditorHeight(newHeight);
+                });
+              }}
               loading={
                 <div className="flex items-center justify-center h-[300px] bg-slate-50 dark:bg-slate-800">
                   <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
@@ -450,6 +458,7 @@ export default function SubmitPage() {
                 tabSize: 4,
                 wordWrap: 'on',
                 readOnly: submitting,
+                scrollbar: { vertical: 'hidden', handleMouseWheel: false },
               }}
             />
 

@@ -46,6 +46,11 @@ export default function DailyTaskTracker({
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide shrink-0">
           {allComplete ? '✓ 오늘 할 일 완료' : '오늘의 할 일'}
         </span>
+        {!allComplete && (
+          <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+            오늘 자정까지
+          </span>
+        )}
 
         <div className="flex items-center gap-3 flex-wrap flex-1">
           {/* 코드 제출 */}
