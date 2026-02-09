@@ -87,7 +87,7 @@ export default function AdminPage() {
         source: formSource,
         problem_number: formNumber.trim(),
         problem_title: formTitle.trim(),
-        created_by: githubUsername || 'admin',
+        created_by: user.id,
       });
 
       if (error) throw error;
