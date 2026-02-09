@@ -8,10 +8,16 @@ const STYLES: Record<string, string> = {
   etc: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
 };
 
+const LABELS: Record<string, string> = {
+  swea: 'SWEA',
+  boj: 'BOJ',
+  etc: '기타',
+};
+
 export default function SourceBadge({ source }: SourceBadgeProps) {
   return (
     <span className={`text-xs px-2 py-0.5 rounded font-medium ${STYLES[source]}`}>
-      {source.toUpperCase()}
+      {LABELS[source] || source.toUpperCase()}
     </span>
   );
 }

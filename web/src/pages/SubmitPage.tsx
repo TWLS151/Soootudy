@@ -51,7 +51,7 @@ export default function SubmitPage() {
   const isEditMode = !!editParam;
 
   // 프리셋 모드: /submit?source=swea&number=6001
-  const presetSource = searchParams.get('source') as 'swea' | 'boj' | null;
+  const presetSource = searchParams.get('source') as 'swea' | 'boj' | 'etc' | null;
   const presetNumber = searchParams.get('number');
 
   const editParts = useMemo(() => {
@@ -59,12 +59,13 @@ export default function SubmitPage() {
     const parts = editParam.split('/');
     if (parts.length !== 3) return null;
     const [eMemberId, eWeek, eName] = parts;
-    const match = eName.match(/^(swea|boj)-(\d+)(-v\d+)?$/);
+    // swea-1234, boj-5678, etc-이름 등 매칭
+    const match = eName.match(/^(swea|boj|etc)-(.+?)(-v\d+)?$/);
     if (!match) return null;
-    return { memberId: eMemberId, week: eWeek, source: match[1] as 'swea' | 'boj', problemNumber: match[2], fullName: eName };
+    return { memberId: eMemberId, week: eWeek, source: match[1] as 'swea' | 'boj' | 'etc', problemNumber: match[2], fullName: eName };
   }, [editParam]);
 
-  const [source, setSource] = useState<'swea' | 'boj'>(editParts?.source || presetSource || 'swea');
+  const [source, setSource] = useState<'swea' | 'boj' | 'etc'>(editParts?.source || presetSource || 'swea');
   const [problemNumber, setProblemNumber] = useState(editParts?.problemNumber || presetNumber || '');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -132,6 +133,7 @@ export default function SubmitPage() {
     }
     return `${memberId}/${displayWeek}/${source}-${problemNumber}-v?.py`;
   }, [memberId, displayWeek, source, problemNumber, isEditMode, editParts]);
+
 
   const canSubmit = code.trim().length > 0 && problemNumber.length > 0 && !submitting && !loadingCode;
 
@@ -304,7 +306,7 @@ export default function SubmitPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setSource('swea')}
+              onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('swea'); }}
               disabled={submitting}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 source === 'swea'
@@ -316,7 +318,7 @@ export default function SubmitPage() {
             </button>
             <button
               type="button"
-              onClick={() => setSource('boj')}
+              onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('boj'); }}
               disabled={submitting}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 source === 'boj'
@@ -326,21 +328,40 @@ export default function SubmitPage() {
             >
               BOJ
             </button>
+            <button
+              type="button"
+              onClick={() => { setSource('etc'); setProblemNumber(''); }}
+              disabled={submitting}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                source === 'etc'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              기타
+            </button>
           </div>
         </div>
 
-        {/* 문제번호 */}
+        {/* 문제번호 / 문제이름 */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            문제번호
+            {source === 'etc' ? '문제 이름' : '문제번호'}
           </label>
           <input
             type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+            inputMode={source === 'etc' ? 'text' : 'numeric'}
+            pattern={source === 'etc' ? undefined : '[0-9]*'}
             value={problemNumber}
-            onChange={(e) => setProblemNumber(e.target.value.replace(/\D/g, ''))}
-            placeholder="예: 6001"
+            onChange={(e) => {
+              if (source === 'etc') {
+                // 파일명에 안전한 문자만 허용: 한글, 영문, 숫자, 하이픈
+                setProblemNumber(e.target.value.replace(/[^가-힣a-zA-Z0-9-]/g, ''));
+              } else {
+                setProblemNumber(e.target.value.replace(/\D/g, ''));
+              }
+            }}
+            placeholder={source === 'etc' ? '예: 이분탐색연습' : '예: 6001'}
             disabled={submitting}
             className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
           />

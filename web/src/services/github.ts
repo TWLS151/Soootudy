@@ -86,7 +86,8 @@ export async function fetchFileContent(path: string): Promise<string> {
   const cached = getCache<string>(cacheKey);
   if (cached) return cached;
 
-  const res = await fetch(`${API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${encodeURIComponent(path)}`, {
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const res = await fetch(`${API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${encodedPath}`, {
     headers: { Accept: 'application/vnd.github.v3.raw' },
   });
   if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);

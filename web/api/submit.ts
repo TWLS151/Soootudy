@@ -105,13 +105,20 @@ export default async function handler(req: any, res: any) {
       .status(400)
       .json({ error: '출처, 문제번호, 코드를 모두 입력해주세요.' });
   }
-  if (!['swea', 'boj'].includes(source)) {
+  if (!['swea', 'boj', 'etc'].includes(source)) {
     return res
       .status(400)
-      .json({ error: '출처는 "swea" 또는 "boj"만 가능합니다.' });
+      .json({ error: '출처는 "swea", "boj", "etc"만 가능합니다.' });
   }
-  if (!/^\d+$/.test(String(problemNumber))) {
-    return res.status(400).json({ error: '문제번호는 숫자만 입력 가능합니다.' });
+  if (source === 'etc') {
+    // 기타: 한글, 영문, 숫자, 하이픈만 허용
+    if (!/^[가-힣a-zA-Z0-9-]+$/.test(String(problemNumber))) {
+      return res.status(400).json({ error: '문제 이름은 한글, 영문, 숫자, 하이픈만 사용 가능합니다.' });
+    }
+  } else {
+    if (!/^\d+$/.test(String(problemNumber))) {
+      return res.status(400).json({ error: '문제번호는 숫자만 입력 가능합니다.' });
+    }
   }
   if (typeof code !== 'string' || code.trim().length === 0) {
     return res.status(400).json({ error: '코드를 입력해주세요.' });
@@ -131,8 +138,9 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: '본인의 코드만 수정할 수 있습니다.' });
     }
 
+    const encodedEditPath = editPath.split('/').map(encodeURIComponent).join('/');
     const checkRes = await fetch(
-      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${editPath}`,
+      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodedEditPath}`,
       {
         headers: {
           Authorization: `token ${githubPat}`,
@@ -153,7 +161,7 @@ export default async function handler(req: any, res: any) {
     const commitMessage = `Update ${editFileName} by ${members[memberId].name}`;
 
     const putRes = await fetch(
-      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${editPath}`,
+      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodedEditPath}`,
       {
         method: 'PUT',
         headers: {
@@ -209,7 +217,8 @@ export default async function handler(req: any, res: any) {
 
   if (dirRes.ok) {
     const dirFiles: Array<{ name: string }> = await dirRes.json();
-    const versionPattern = new RegExp(`^${name}-v(\\d+)\\.py$`);
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const versionPattern = new RegExp(`^${escapedName}-v(\\d+)\\.py$`);
     const legacyName = `${name}.py`;
 
     let maxVersion = 0;
@@ -240,8 +249,9 @@ export default async function handler(req: any, res: any) {
   const content = Buffer.from(code, 'utf-8').toString('base64');
   const commitMessage = `Add ${versionedName} by ${members[memberId].name}`;
 
+  const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
   const putRes = await fetch(
-    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${filePath}`,
+    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodedFilePath}`,
     {
       method: 'PUT',
       headers: {
