@@ -1,10 +1,22 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
-import { Upload, Pencil, AlertCircle, CheckCircle, FileCode } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useOutletContext, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Upload, Pencil, AlertCircle, FileCode, ExternalLink } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import confetti from 'canvas-confetti';
 import { supabase } from '../lib/supabase';
 import { fetchFileContent } from '../services/github';
 import type { Members, Problem, Activities } from '../types';
+
+const SUCCESS_MESSAGES = [
+  '코드가 날아갔습니다!',
+  'GitHub가 감동받았습니다!',
+  '수고했어 오늘도!',
+  '멋진 코드네요!',
+  '제출 완료! 오늘도 한 문제 클리어!',
+  'Git push 성공! 커밋 로그가 빛나고 있어요',
+  '알고리즘 마스터에 한 걸음 더!',
+];
 
 interface Context {
   members: Members;
@@ -55,10 +67,12 @@ export default function SubmitPage() {
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [successData, setSuccessData] = useState<{ memberId: string; week: string; name: string } | null>(null);
+  const [successMessage] = useState(() => SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)]);
   const [memberId, setMemberId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState<string>('');
   const [loadingCode, setLoadingCode] = useState(isEditMode);
+  const confettiFired = useRef(false);
 
   const editWeek = editParts?.week;
   const currentWeek = useMemo(() => getCurrentWeek(), []);
@@ -119,6 +133,21 @@ export default function SubmitPage() {
 
   const canSubmit = code.trim().length > 0 && problemNumber.length > 0 && !submitting && !loadingCode;
 
+  // 성공 시 컨페티 발사
+  useEffect(() => {
+    if (successData && !confettiFired.current) {
+      confettiFired.current = true;
+      const duration = 2000;
+      const end = Date.now() + duration;
+      const frame = () => {
+        confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
+        confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      };
+      frame();
+    }
+  }, [successData]);
+
   async function handleSubmit() {
     setError(null);
     setSubmitting(true);
@@ -166,12 +195,7 @@ export default function SubmitPage() {
         // sessionStorage 사용 불가 시 무시
       }
 
-      setSuccess(true);
-
-      // 문제 페이지로 이동
-      setTimeout(() => {
-        navigate(`/problem/${data.memberId}/${data.week}/${data.name}`);
-      }, 1500);
+      setSuccessData({ memberId: data.memberId, week: data.week, name: data.name });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.',
@@ -179,6 +203,32 @@ export default function SubmitPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // 성공 화면
+  if (successData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 space-y-6">
+        <div className="w-48 h-48">
+          <DotLottieReact src="/fox.lottie" loop autoplay />
+        </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {successMessage}
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400">
+            GitHub에 코드가 성공적으로 올라갔어요
+          </p>
+        </div>
+        <Link
+          to={`/problem/${successData.memberId}/${successData.week}/${successData.name}`}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+          내 코드 보러가기
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -203,16 +253,6 @@ export default function SubmitPage() {
           </p>
         </div>
       </div>
-
-      {/* 성공 메시지 */}
-      {success && (
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-          <p className="text-sm text-green-700 dark:text-green-300">
-            코드가 성공적으로 제출되었습니다! 문제 페이지로 이동합니다...
-          </p>
-        </div>
-      )}
 
       {/* 에러 메시지 */}
       {error && (
@@ -249,6 +289,7 @@ export default function SubmitPage() {
             <button
               type="button"
               onClick={() => setSource('swea')}
+              disabled={submitting}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 source === 'swea'
                   ? 'bg-indigo-600 text-white'
@@ -260,6 +301,7 @@ export default function SubmitPage() {
             <button
               type="button"
               onClick={() => setSource('boj')}
+              disabled={submitting}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 source === 'boj'
                   ? 'bg-indigo-600 text-white'
@@ -283,7 +325,8 @@ export default function SubmitPage() {
             value={problemNumber}
             onChange={(e) => setProblemNumber(e.target.value.replace(/\D/g, ''))}
             placeholder="예: 6001"
-            className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            disabled={submitting}
+            className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
           />
         </div>
 
@@ -300,12 +343,12 @@ export default function SubmitPage() {
           </div>
         )}
 
-        {/* Monaco Editor */}
+        {/* Monaco Editor + 제출 중 오버레이 */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
             코드
           </label>
-          <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+          <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
             <Editor
               height="300px"
               language="python"
@@ -313,7 +356,7 @@ export default function SubmitPage() {
               value={code}
               onChange={(value) => setCode(value || '')}
               loading={
-                <div className="flex items-center justify-center h-[500px] bg-slate-50 dark:bg-slate-800">
+                <div className="flex items-center justify-center h-[300px] bg-slate-50 dark:bg-slate-800">
                   <div className="w-8 h-8 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
                 </div>
               }
@@ -325,8 +368,21 @@ export default function SubmitPage() {
                 automaticLayout: true,
                 tabSize: 4,
                 wordWrap: 'on',
+                readOnly: submitting,
               }}
             />
+
+            {/* 제출 중 오버레이 */}
+            {submitting && (
+              <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
+                <div className="w-28 h-28">
+                  <DotLottieReact src="/pochita.lottie" loop autoplay />
+                </div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 animate-pulse">
+                  GitHub에 업로드 중...
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -344,7 +400,8 @@ export default function SubmitPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors"
+            disabled={submitting}
+            className="px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             취소
           </button>
