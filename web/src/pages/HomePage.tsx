@@ -7,6 +7,7 @@ import StatsChart from '../components/StatsChart';
 import SourceBadge from '../components/SourceBadge';
 import { sortedMemberEntries, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
+import { getKSTToday } from '../lib/date';
 import type { Members, Problem, Activities, DailyProblem } from '../types';
 
 interface Context {
@@ -39,7 +40,7 @@ export default function HomePage() {
     loadPastProblems();
 
     // 실시간 구독
-    const today = new Date().toISOString().split('T')[0];
+    const today = getKSTToday();
     const subscription = supabase
       .channel(`daily_problems:${today}`)
       .on(
@@ -63,7 +64,7 @@ export default function HomePage() {
 
   async function loadDailyProblems() {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getKSTToday();
       const { data, error } = await supabase
         .from('daily_problem')
         .select('*')
@@ -81,7 +82,7 @@ export default function HomePage() {
 
   async function loadPastProblems() {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getKSTToday();
       const { data, error } = await supabase
         .from('daily_problem')
         .select('*')

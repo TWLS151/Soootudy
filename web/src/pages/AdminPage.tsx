@@ -4,6 +4,7 @@ import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight } f
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { supabase } from '../lib/supabase';
+import { getKSTToday } from '../lib/date';
 import type { Members, Problem, DailyProblem } from '../types';
 import type { User } from '@supabase/supabase-js';
 
@@ -44,7 +45,7 @@ export default function AdminPage() {
 
   // Add form
   const [showForm, setShowForm] = useState(false);
-  const [formDate, setFormDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState(() => getKSTToday());
   const [formSource, setFormSource] = useState<Source>('swea');
   const [formNumber, setFormNumber] = useState('');
   const [formTitle, setFormTitle] = useState('');
@@ -123,7 +124,7 @@ export default function AdminPage() {
   }
 
   // Group problems by date
-  const today = new Date().toISOString().split('T')[0];
+  const today = getKSTToday();
 
   const problemsByDate = useMemo(() => {
     const map = new Map<string, DailyProblem[]>();

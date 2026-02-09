@@ -5,6 +5,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
+import { getKSTToday } from '../lib/date';
 import type { Members, Problem, DailyProblem } from '../types';
 
 interface Context {
@@ -98,7 +99,7 @@ export default function DailyHistoryPage() {
       ) : (
         <div className="space-y-6">
           {groupedByDate.map((group) => {
-            const isToday = group.date === new Date().toISOString().split('T')[0];
+            const isToday = group.date === getKSTToday();
 
             return (
               <div
