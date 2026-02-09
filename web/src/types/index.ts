@@ -1,6 +1,7 @@
 export interface Member {
   name: string;
   github: string;
+  admin?: boolean;
 }
 
 export interface Members {

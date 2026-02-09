@@ -6,7 +6,7 @@
   "lcj": { "name": "이창준", "github": "Junch-Lee" },
   "lhw": { "name": "이현우", "github": "balbi-hw" },
   "ljy": { "name": "임지영", "github": "limji02" },
-  "jsc": { "name": "장수철", "github": "Apple7575" },
+  "jsc": { "name": "장수철", "github": "Apple7575", "admin": true },
   "jdy": { "name": "조다영", "github": "dayoungcho" },
   "jhj": { "name": "조희주", "github": "heemesama" },
   "hyw": { "name": "한영욱", "github": "10wook" }

@@ -4,6 +4,8 @@ import { FlaskConical, Upload, PanelLeftClose, PanelLeft } from 'lucide-react';
 import Sidebar from './Sidebar';
 import SearchBar from './SearchBar';
 import ThemeToggle from './ThemeToggle';
+import UserMenu from './UserMenu';
+import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities } from '../types';
 
 interface LayoutProps {
@@ -14,9 +16,11 @@ interface LayoutProps {
   dark: boolean;
   toggleTheme: () => void;
   addProblem: (problem: Problem) => void;
+  user: User;
+  onLogout: () => void;
 }
 
-export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem }: LayoutProps) {
+export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem, user, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
@@ -81,6 +85,9 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
           <FlaskConical className="w-5 h-5" />
           <span className="text-sm font-medium hidden sm:inline">실험실</span>
         </Link>
+
+        {/* 프로필 메뉴 */}
+        <UserMenu user={user} members={members} onLogout={onLogout} />
       </header>
 
       {/* 사이드바 */}
@@ -96,7 +103,7 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
       {/* 메인 콘텐츠 */}
       <main className="pt-16">
         <div className="p-6 max-w-5xl mx-auto">
-          <Outlet context={{ members, problems, weeks, activities, dark, addProblem }} />
+          <Outlet context={{ members, problems, weeks, activities, dark, addProblem, user }} />
         </div>
       </main>
     </div>

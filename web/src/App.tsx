@@ -14,6 +14,7 @@ import WeeklyPage from './pages/WeeklyPage';
 import LabPage from './pages/LabPage';
 import SubmitPage from './pages/SubmitPage';
 import DailyHistoryPage from './pages/DailyHistoryPage';
+import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -83,6 +84,8 @@ export default function App() {
               dark={dark}
               toggleTheme={toggle}
               addProblem={addProblem}
+              user={auth.user!}
+              onLogout={auth.logout}
             />
           }
         >
@@ -94,6 +97,7 @@ export default function App() {
           <Route path="lab" element={<LabPage />} />
           <Route path="submit" element={<SubmitPage />} />
           <Route path="daily-history" element={<DailyHistoryPage />} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
