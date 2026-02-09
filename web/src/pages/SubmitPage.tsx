@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Upload, Pencil, AlertCircle, FileCode, ExternalLink } from 'lucide-react';
+import { Upload, Pencil, AlertCircle, FileCode, ExternalLink, X } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import confetti from 'canvas-confetti';
@@ -75,6 +75,7 @@ export default function SubmitPage() {
   const [memberId, setMemberId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState<string>('');
   const [loadingCode, setLoadingCode] = useState(isEditMode);
+  const [showBear, setShowBear] = useState(true);
   const confettiFired = useRef(false);
 
   const editWeek = editParts?.week;
@@ -283,103 +284,128 @@ export default function SubmitPage() {
 
       {/* 폼 */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
-        {/* 유저 정보 + 주차 */}
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">제출자</span>
-            <span className="font-medium text-slate-900 dark:text-white">
-              {memberName || '확인 중...'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">주차</span>
-            <span className="font-medium text-slate-900 dark:text-white">
-              {currentWeek}
-            </span>
-          </div>
-        </div>
+        {/* 상단: 폼 필드 + 곰 카드 */}
+        <div className="flex gap-6">
+          {/* 왼쪽: 폼 필드 */}
+          <div className="flex-1 space-y-5">
+            {/* 유저 정보 + 주차 */}
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-sm">
+                <span className="text-slate-500 dark:text-slate-400">제출자</span>
+                <span className="font-medium text-slate-900 dark:text-white">
+                  {memberName || '확인 중...'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-sm">
+                <span className="text-slate-500 dark:text-slate-400">주차</span>
+                <span className="font-medium text-slate-900 dark:text-white">
+                  {currentWeek}
+                </span>
+              </div>
+            </div>
 
-        {/* 출처 선택 */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            출처
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('swea'); }}
-              disabled={submitting}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                source === 'swea'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              SWEA
-            </button>
-            <button
-              type="button"
-              onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('boj'); }}
-              disabled={submitting}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                source === 'boj'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              BOJ
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSource('etc'); setProblemNumber(''); }}
-              disabled={submitting}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                source === 'etc'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              기타
-            </button>
-          </div>
-        </div>
+            {/* 출처 선택 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                출처
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('swea'); }}
+                  disabled={submitting}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    source === 'swea'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  SWEA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { if (source === 'etc') setProblemNumber(''); setSource('boj'); }}
+                  disabled={submitting}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    source === 'boj'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  BOJ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSource('etc'); setProblemNumber(''); }}
+                  disabled={submitting}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    source === 'etc'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  기타
+                </button>
+              </div>
+            </div>
 
-        {/* 문제번호 / 문제이름 */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            {source === 'etc' ? '문제 이름' : '문제번호'}
-          </label>
-          <input
-            type="text"
-            inputMode={source === 'etc' ? 'text' : 'numeric'}
-            pattern={source === 'etc' ? undefined : '[0-9]*'}
-            value={problemNumber}
-            onChange={(e) => {
-              if (source === 'etc') {
-                // 파일명에 안전한 문자만 허용: 한글(자모+완성형), 영문, 숫자, 하이픈, 띄어쓰기
-                setProblemNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
-              } else {
-                setProblemNumber(e.target.value.replace(/\D/g, ''));
-              }
-            }}
-            placeholder={source === 'etc' ? '예: 이분 탐색 연습' : '예: 6001'}
-            disabled={submitting}
-            className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
-          />
-        </div>
+            {/* 문제번호 / 문제이름 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {source === 'etc' ? '문제 이름' : '문제번호'}
+              </label>
+              <input
+                type="text"
+                inputMode={source === 'etc' ? 'text' : 'numeric'}
+                pattern={source === 'etc' ? undefined : '[0-9]*'}
+                value={problemNumber}
+                onChange={(e) => {
+                  if (source === 'etc') {
+                    // 파일명에 안전한 문자만 허용: 한글(자모+완성형), 영문, 숫자, 하이픈, 띄어쓰기
+                    setProblemNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
+                  } else {
+                    setProblemNumber(e.target.value.replace(/\D/g, ''));
+                  }
+                }}
+                placeholder={source === 'etc' ? '예: 이분 탐색 연습' : '예: 6001'}
+                disabled={submitting}
+                className="w-full max-w-xs px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+              />
+            </div>
 
-        {/* 파일 경로 미리보기 */}
-        {filePath && (
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <FileCode className="w-4 h-4" />
-            <span>
-              파일 경로:{' '}
-              <code className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs font-mono text-slate-700 dark:text-slate-300">
-                {filePath}
-              </code>
-            </span>
+            {/* 파일 경로 미리보기 */}
+            {filePath && (
+              <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <FileCode className="w-4 h-4" />
+                <span>
+                  파일 경로:{' '}
+                  <code className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs font-mono text-slate-700 dark:text-slate-300">
+                    {filePath}
+                  </code>
+                </span>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 오른쪽: Dancing Bear 카드 */}
+          {showBear && (
+            <div className="hidden md:flex relative w-48 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/50 p-4">
+              <button
+                onClick={() => setShowBear(false)}
+                className="absolute top-2 right-2 p-1 rounded-md text-amber-400 dark:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                aria-label="닫기"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-32 h-32">
+                <DotLottieReact src="/bear.lottie" loop autoplay />
+              </div>
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium text-center mt-1">
+                화이팅!
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Monaco Editor + 제출 중 오버레이 */}
         <div className="space-y-2">
