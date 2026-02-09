@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useOutletContext, Link, useNavigate } from 'react-router-dom';
 import CodeViewer from '../components/CodeViewer';
 import MarkdownViewer from '../components/MarkdownViewer';
 import SourceBadge from '../components/SourceBadge';
-import Comments from '../components/Comments';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown } from 'lucide-react';
+import InlineCommentCard from '../components/InlineCommentCard';
+import CodeCommentPanel from '../components/CodeCommentPanel';
+import { useCodeComments } from '../hooks/useCodeComments';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, MessageSquare, Circle } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
@@ -42,6 +44,11 @@ export default function ProblemPage() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // 댓글 시스템 상태
+  const [showDots, setShowDots] = useState(true);
+  const [showPanel, setShowPanel] = useState(true);
+  const [activeCommentLine, setActiveCommentLine] = useState<number | null>(null);
+
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
   );
@@ -49,29 +56,21 @@ export default function ProblemPage() {
   const member = memberId ? members[memberId] : undefined;
   const isOwner = currentMemberId === memberId;
 
+  // 댓글 데이터
+  const commentData = useCodeComments(problem?.id || '');
+
   // 현재 로그인한 유저의 memberId 찾기
   useEffect(() => {
     async function resolveMember() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log('[ProblemPage] No user logged in');
-        return;
-      }
-      console.log('[ProblemPage] user_metadata:', user.user_metadata);
-      // GitHub OAuth에서 username은 user_name, preferred_username, 또는 login으로 올 수 있음
+      if (!user) return;
       const githubUsername = user.user_metadata?.user_name
         || user.user_metadata?.preferred_username
         || user.user_metadata?.login
         || user.user_metadata?.nickname;
-      console.log('[ProblemPage] Resolved GitHub username:', githubUsername);
-      if (!githubUsername) {
-        console.log('[ProblemPage] No GitHub username found in metadata');
-        return;
-      }
+      if (!githubUsername) return;
       for (const [id, m] of Object.entries(members)) {
-        console.log(`[ProblemPage] Comparing: "${m.github.toLowerCase()}" vs "${githubUsername.toLowerCase()}"`);
         if (m.github.toLowerCase() === githubUsername.toLowerCase()) {
-          console.log('[ProblemPage] Match found! Setting currentMemberId:', id);
           setCurrentMemberId(id);
           break;
         }
@@ -164,9 +163,9 @@ export default function ProblemPage() {
     setCode(null);
     setNote(null);
     setResolvedSource(null);
-    // 문제 바뀌면 비교 모드 해제
     setCompareWith(null);
     setExpanded(false);
+    setActiveCommentLine(null);
 
     async function load() {
       try {
@@ -174,7 +173,6 @@ export default function ProblemPage() {
         if (cancelled) return;
         setCode(codeContent);
 
-        // 메타데이터에서 출처 파싱
         const metaSource = parseSourceFromCode(codeContent);
         if (metaSource) setResolvedSource(metaSource);
 
@@ -192,6 +190,33 @@ export default function ProblemPage() {
     load();
     return () => { cancelled = true; };
   }, [problem]);
+
+  // 라인 클릭 핸들러
+  const handleLineClick = useCallback((lineNumber: number) => {
+    setActiveCommentLine((prev) => (prev === lineNumber ? null : lineNumber));
+  }, []);
+
+  // 인라인 카드 렌더
+  const renderInlineCard = useCallback(
+    (lineNumber: number) => {
+      const lineComments = commentData.commentsByLine.get(lineNumber) || [];
+      return (
+        <InlineCommentCard
+          lineNumber={lineNumber}
+          comments={lineComments}
+          allComments={commentData.comments}
+          user={commentData.user}
+          authorColorMap={commentData.authorColorMap}
+          onSubmit={async (content, parentId) => {
+            await commentData.addComment(content, lineNumber, parentId);
+          }}
+          onClose={() => setActiveCommentLine(null)}
+          dark={dark}
+        />
+      );
+    },
+    [commentData, dark]
+  );
 
   if (!problem || !member) {
     return (
@@ -227,9 +252,8 @@ export default function ProblemPage() {
       }
       groups[sol.member].push(sol);
     }
-    // 각 그룹 내에서 버전순 정렬 (원본 → v1 → v2 ...)
-    for (const memberId of Object.keys(groups)) {
-      groups[memberId].sort((a, b) => {
+    for (const mId of Object.keys(groups)) {
+      groups[mId].sort((a, b) => {
         const vA = a.version ?? 0;
         const vB = b.version ?? 0;
         return vA - vB;
@@ -238,7 +262,6 @@ export default function ProblemPage() {
     return groups;
   }, [otherSolutions]);
 
-  // 멤버별 선택된 버전 가져오기 (기본값: 최신 버전)
   function getSelectedProblem(mId: string): Problem | undefined {
     const versions = groupedSolutions[mId];
     if (!versions || versions.length === 0) return undefined;
@@ -247,13 +270,10 @@ export default function ProblemPage() {
       const found = versions.find((p) => p.id === selectedId);
       if (found) return found;
     }
-    // 기본값: 최신 버전 (마지막)
     return versions[versions.length - 1];
   }
 
   const compareMember = compareWith ? members[compareWith.member] : null;
-
-  // 확장/비교 모드일 때 전체 너비 사용
   const isWideMode = expanded || compareWith;
 
   return (
@@ -283,6 +303,35 @@ export default function ProblemPage() {
             <Link to={`/weekly/${week}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
               {week}
             </Link>
+
+            {/* 댓글 토글 버튼들 */}
+            <span className="hidden md:inline">·</span>
+            <div className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => setShowDots(!showDots)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${
+                  showDots
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+                title={showDots ? '댓글 점 숨기기' : '댓글 점 보기'}
+              >
+                <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
+                <span>점</span>
+              </button>
+              <button
+                onClick={() => setShowPanel(!showPanel)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${
+                  showPanel
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                    : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+                title={showPanel ? '댓글 패널 닫기' : '댓글 패널 열기'}
+              >
+                <MessageSquare className="w-3 h-3" />
+                <span>패널</span>
+              </button>
+            </div>
 
             {isOwner && (
               <div className="relative" ref={menuRef}>
@@ -324,10 +373,35 @@ export default function ProblemPage() {
           </div>
         </div>
 
+        {/* 모바일 댓글 토글 */}
+        <div className="flex md:hidden items-center gap-2">
+          <button
+            onClick={() => setShowDots(!showDots)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              showDots
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
+            댓글 점
+          </button>
+          <button
+            onClick={() => setShowPanel(!showPanel)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              showPanel
+                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <MessageSquare className="w-3 h-3" />
+            댓글 패널
+          </button>
+        </div>
+
         {/* 비교 모드 */}
         {compareWith && (
           <div className="space-y-4">
-            {/* 비교 모드 헤더 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 <GitCompare className="w-4 h-4" />
@@ -342,9 +416,7 @@ export default function ProblemPage() {
               </button>
             </div>
 
-            {/* 두 코드 나란히 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* 내 코드 */}
               <div>
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -358,8 +430,6 @@ export default function ProblemPage() {
                   <p className="text-slate-500 dark:text-slate-400 text-sm">코드를 불러올 수 없습니다.</p>
                 )}
               </div>
-
-              {/* 비교 대상 코드 */}
               <div>
                 {compareLoading ? (
                   <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -383,9 +453,9 @@ export default function ProblemPage() {
 
         {/* 일반/확장 모드 */}
         {!compareWith && (
-          <div className={`flex flex-col ${expanded ? '' : 'md:flex-row'} gap-6`}>
+          <div className={`flex flex-col ${expanded || !showPanel ? '' : 'md:flex-row'} gap-6`}>
             {/* 코드 섹션 */}
-            <div className={`flex-1 ${expanded ? '' : 'md:w-[60%]'} space-y-6`}>
+            <div className={`flex-1 ${expanded || !showPanel ? '' : 'md:w-[60%]'} space-y-6`}>
               {/* 탭 */}
               {problem.hasNote && (
                 <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
@@ -421,7 +491,17 @@ export default function ProblemPage() {
                   <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 animate-pulse">코드를 불러오는 중...</p>
                 </div>
               ) : activeTab === 'code' && code ? (
-                <CodeViewer code={code} dark={dark} expanded={expanded} onToggleExpand={() => setExpanded(!expanded)} />
+                <CodeViewer
+                  code={code}
+                  dark={dark}
+                  expanded={expanded}
+                  onToggleExpand={() => setExpanded(!expanded)}
+                  onLineClick={handleLineClick}
+                  commentDots={commentData.dots}
+                  showDots={showDots}
+                  activeCommentLine={activeCommentLine}
+                  renderInlineCard={renderInlineCard}
+                />
               ) : activeTab === 'note' && note ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
                   <MarkdownViewer content={note} dark={dark} />
@@ -446,7 +526,6 @@ export default function ProblemPage() {
                       const hasMultipleVersions = versions.length > 1;
                       const isSameMember = mId === memberId;
 
-                      // 버전 표시 텍스트
                       const getVersionLabel = (p: Problem) => {
                         if (p.version === undefined) return '원본';
                         return `v${p.version}`;
@@ -454,7 +533,6 @@ export default function ProblemPage() {
 
                       return (
                         <div key={mId} className="flex items-center">
-                          {/* 이름 + 버전 드롭다운 */}
                           <div className="relative flex items-center">
                             <Link
                               to={`/problem/${mId}/${selectedProblem.week}/${selectedProblem.name}`}
@@ -470,7 +548,6 @@ export default function ProblemPage() {
                               </span>
                             </Link>
 
-                            {/* 버전 드롭다운 (여러 버전일 때만) */}
                             {hasMultipleVersions && (
                               <>
                                 <button
@@ -506,7 +583,6 @@ export default function ProblemPage() {
                               </>
                             )}
 
-                            {/* 주차 표시 (버전이 1개일 때만) */}
                             {!hasMultipleVersions && (
                               <span className="px-2 py-2 text-xs text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700">
                                 {selectedProblem.week}
@@ -514,7 +590,6 @@ export default function ProblemPage() {
                             )}
                           </div>
 
-                          {/* 비교 버튼 */}
                           <button
                             onClick={() => setCompareWith(selectedProblem)}
                             className="px-2 py-2 rounded-r-lg bg-slate-100 dark:bg-slate-700 border border-l-0 border-slate-200 dark:border-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -530,10 +605,30 @@ export default function ProblemPage() {
               )}
             </div>
 
-            {/* 댓글 섹션 */}
-            <div className={expanded ? 'w-full' : 'md:w-[40%]'}>
-              <Comments problemId={problem.id} />
-            </div>
+            {/* 댓글 패널 */}
+            {showPanel && (
+              <div className={expanded ? 'w-full' : 'md:w-[40%]'}>
+                <CodeCommentPanel
+                  comments={commentData.comments}
+                  loading={commentData.loading}
+                  user={commentData.user}
+                  authorColorMap={commentData.authorColorMap}
+                  getReplies={commentData.getReplies}
+                  onUpdateComment={commentData.updateComment}
+                  onDeleteComment={commentData.deleteComment}
+                  onAddReply={(content, lineNumber, parentId) =>
+                    commentData.addComment(content, lineNumber, parentId)
+                  }
+                  onLineSelect={(lineNumber) => {
+                    setActiveCommentLine(lineNumber);
+                    // 해당 줄로 스크롤
+                    const el = document.querySelector(`[data-line-number="${lineNumber}"]`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  onClose={() => setShowPanel(false)}
+                />
+              </div>
+            )}
           </div>
         )}
 

@@ -69,6 +69,8 @@ export interface Comment {
   content: string;
   created_at: string;
   updated_at: string;
+  line_number?: number | null;
+  parent_id?: string | null;
 }
 
 export interface DailyProblem {
