@@ -6,6 +6,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import confetti from 'canvas-confetti';
 import { supabase } from '../lib/supabase';
 import { fetchFileContent } from '../services/github';
+import { parseVersionFromName } from '../services/parser';
 import type { Members, Problem, Activities } from '../types';
 
 const SUCCESS_MESSAGES = [
@@ -24,6 +25,7 @@ interface Context {
   dark: boolean;
   activities: Activities;
   weeks: string[];
+  addProblem: (problem: Problem) => void;
 }
 
 function getCurrentWeek(): string {
@@ -40,7 +42,7 @@ function getCurrentWeek(): string {
 }
 
 export default function SubmitPage() {
-  const { members, dark } = useOutletContext<Context>();
+  const { members, dark, addProblem } = useOutletContext<Context>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -194,6 +196,20 @@ export default function SubmitPage() {
       } catch {
         // sessionStorage 사용 불가 시 무시
       }
+
+      // 낙관적 업데이트: problems 배열에 즉시 추가
+      const { baseName, version } = parseVersionFromName(data.name);
+      addProblem({
+        id: `${data.memberId}/${data.week}/${data.name}`,
+        member: data.memberId,
+        week: data.week,
+        name: data.name,
+        source,
+        path: data.path,
+        hasNote: false,
+        version,
+        baseName,
+      });
 
       setSuccessData({ memberId: data.memberId, week: data.week, name: data.name });
     } catch (err) {

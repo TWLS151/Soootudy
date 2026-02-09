@@ -13,9 +13,10 @@ interface LayoutProps {
   activities: Activities;
   dark: boolean;
   toggleTheme: () => void;
+  addProblem: (problem: Problem) => void;
 }
 
-export default function Layout({ members, problems, weeks, activities, dark, toggleTheme }: LayoutProps) {
+export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
@@ -94,7 +95,7 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
       {/* 메인 콘텐츠 */}
       <main className="pt-16">
         <div className="p-6 max-w-5xl mx-auto">
-          <Outlet context={{ members, problems, weeks, activities, dark }} />
+          <Outlet context={{ members, problems, weeks, activities, dark, addProblem }} />
         </div>
       </main>
     </div>
