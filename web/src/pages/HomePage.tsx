@@ -123,7 +123,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <div className="text-center py-8">
-        <div className="w-32 h-32 mx-auto mb-2">
+        <div className="w-48 h-48 mx-auto mb-2">
           <DotLottieReact src="/pigeon.lottie" loop autoplay />
         </div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Soootudy</h1>

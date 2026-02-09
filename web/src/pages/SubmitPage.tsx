@@ -19,6 +19,21 @@ const SUCCESS_MESSAGES = [
   '알고리즘 마스터에 한 걸음 더!',
 ];
 
+const MASCOT_LOTTIES = ['/bear.lottie', '/cat.lottie', '/fox.lottie', '/pigeon.lottie', '/pochita.lottie'];
+
+const CHEER_MESSAGES = [
+  '화이팅!',
+  '오늘도 한 문제!',
+  '넌 할 수 있어!',
+  '집중 모드 ON',
+  '좋은 코드 기대할게!',
+  '알고리즘 정복 중...',
+  '천천히 생각해봐!',
+  '포기하지 마!',
+  '거의 다 왔어!',
+  '코딩은 즐거워~',
+];
+
 interface Context {
   members: Members;
   problems: Problem[];
@@ -75,7 +90,9 @@ export default function SubmitPage() {
   const [memberId, setMemberId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState<string>('');
   const [loadingCode, setLoadingCode] = useState(isEditMode);
-  const [showBear, setShowBear] = useState(true);
+  const [showMascot, setShowMascot] = useState(true);
+  const [mascotLottie] = useState(() => MASCOT_LOTTIES[Math.floor(Math.random() * MASCOT_LOTTIES.length)]);
+  const [cheerMessage] = useState(() => CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)]);
   const confettiFired = useRef(false);
 
   const editWeek = editParts?.week;
@@ -387,21 +404,21 @@ export default function SubmitPage() {
             )}
           </div>
 
-          {/* 오른쪽: Dancing Bear 카드 */}
-          {showBear && (
-            <div className="hidden md:flex relative w-48 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/50 p-4">
+          {/* 오른쪽: 마스코트 카드 */}
+          {showMascot && (
+            <div className="hidden md:flex relative w-52 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/50 p-4">
               <button
-                onClick={() => setShowBear(false)}
+                onClick={() => setShowMascot(false)}
                 className="absolute top-2 right-2 p-1 rounded-md text-amber-400 dark:text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
                 aria-label="닫기"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-              <div className="w-32 h-32">
-                <DotLottieReact src="/bear.lottie" loop autoplay />
+              <div className="w-48 h-48">
+                <DotLottieReact src={mascotLottie} loop autoplay />
               </div>
               <p className="text-xs text-amber-600 dark:text-amber-400 font-medium text-center mt-1">
-                화이팅!
+                {cheerMessage}
               </p>
             </div>
           )}
