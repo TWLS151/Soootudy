@@ -111,8 +111,8 @@ export default async function handler(req: any, res: any) {
       .json({ error: '출처는 "swea", "boj", "etc"만 가능합니다.' });
   }
   if (source === 'etc') {
-    // 기타: 한글, 영문, 숫자, 하이픈만 허용
-    if (!/^[가-힣a-zA-Z0-9-]+$/.test(String(problemNumber))) {
+    // 기타: 한글(자모+완성형), 영문, 숫자, 하이픈만 허용
+    if (!/^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9-]+$/.test(String(problemNumber))) {
       return res.status(400).json({ error: '문제 이름은 한글, 영문, 숫자, 하이픈만 사용 가능합니다.' });
     }
   } else {

@@ -355,8 +355,8 @@ export default function SubmitPage() {
             value={problemNumber}
             onChange={(e) => {
               if (source === 'etc') {
-                // 파일명에 안전한 문자만 허용: 한글, 영문, 숫자, 하이픈
-                setProblemNumber(e.target.value.replace(/[^가-힣a-zA-Z0-9-]/g, ''));
+                // 파일명에 안전한 문자만 허용: 한글(자모+완성형), 영문, 숫자, 하이픈
+                setProblemNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9-]/g, ''));
               } else {
                 setProblemNumber(e.target.value.replace(/\D/g, ''));
               }
