@@ -186,7 +186,7 @@ export default function CodeCommentPanel({
                       }}
                       className="text-[10px] font-mono px-1 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
-                      L{comment.line_number}
+                      Line{comment.line_number}
                     </button>
                   )}
 

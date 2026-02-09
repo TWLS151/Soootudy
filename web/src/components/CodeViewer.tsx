@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Maximize2, Minimize2 } from 'lucide-react';
@@ -20,6 +20,8 @@ interface CodeViewerProps {
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
 }
 
+const DOT_PADDING = 20;
+
 export default function CodeViewer({
   code,
   language = 'python',
@@ -35,46 +37,39 @@ export default function CodeViewer({
   renderInlineCard,
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [linePositions, setLinePositions] = useState<
-    Map<number, { top: number; height: number }>
-  >(new Map());
+  const [cardPosition, setCardPosition] = useState<{ top: number } | null>(null);
 
-  const measureLines = useCallback(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    const lineEls = container.querySelectorAll('span[data-line-number]');
-    if (lineEls.length === 0) return;
+  // Group dots by line for lineProps lookup
+  const dotsByLine = useMemo(() => {
+    const map = new Map<number, CommentDot[]>();
+    if (!commentDots) return map;
+    for (const dot of commentDots) {
+      if (!map.has(dot.line)) map.set(dot.line, []);
+      map.get(dot.line)!.push(dot);
+    }
+    return map;
+  }, [commentDots]);
 
-    const positions = new Map<number, { top: number; height: number }>();
-    const containerRect = container.getBoundingClientRect();
-
-    lineEls.forEach((el) => {
-      const lineNum = parseInt(el.getAttribute('data-line-number') || '0');
-      if (lineNum > 0) {
-        const rect = el.getBoundingClientRect();
-        positions.set(lineNum, {
-          top: rect.top - containerRect.top,
-          height: rect.height,
-        });
+  // Calculate inline card position when active line changes
+  useEffect(() => {
+    if (activeCommentLine == null || !containerRef.current) {
+      setCardPosition(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const lineEl = containerRef.current?.querySelector(
+        `[data-line-number="${activeCommentLine}"]`
+      );
+      if (!lineEl || !containerRef.current) {
+        setCardPosition(null);
+        return;
       }
-    });
-
-    setLinePositions(positions);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(measureLines, 100);
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const lineRect = lineEl.getBoundingClientRect();
+      setCardPosition({ top: lineRect.bottom - containerRect.top + 4 });
+    }, 20);
     return () => clearTimeout(timer);
-  }, [code, measureLines]);
-
-  useEffect(() => {
-    window.addEventListener('resize', measureLines);
-    return () => window.removeEventListener('resize', measureLines);
-  }, [measureLines]);
-
-  // Build a Set of lines that have dots for quick lookup
-  const dotLines = new Set(commentDots?.map((d) => d.line) || []);
-  const DOT_PADDING = 20; // extra space above lines with comments for dots
+  }, [activeCommentLine, commentDots]);
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>
@@ -108,23 +103,39 @@ export default function CodeViewer({
           style={dark ? oneDark : oneLight}
           showLineNumbers
           wrapLines
-          lineProps={(lineNumber: number) => ({
-            'data-line-number': lineNumber,
-            style: {
-              display: 'block',
-              cursor: onLineClick ? 'pointer' : undefined,
-              paddingTop:
-                showDots && dotLines.has(lineNumber) ? DOT_PADDING : undefined,
-              backgroundColor:
-                activeCommentLine === lineNumber
-                  ? dark
-                    ? 'rgba(99,102,241,0.15)'
-                    : 'rgba(99,102,241,0.08)'
-                  : undefined,
-            },
-            className: onLineClick ? 'code-line-clickable' : '',
-            onClick: onLineClick ? () => onLineClick(lineNumber) : undefined,
-          })}
+          lineProps={(lineNumber: number) => {
+            const lineDots = showDots ? (dotsByLine.get(lineNumber) || []) : [];
+            const hasDots = lineDots.length > 0;
+
+            // Render dots as CSS radial-gradient backgrounds
+            // Each dot = 2 layers: colored circle on top, ring underneath
+            const ringColor = dark ? '#1e293b' : '#ffffff';
+            const dotBgs = hasDots
+              ? lineDots.flatMap((dot) => [
+                  `radial-gradient(circle at ${12 + dot.authorIndex * 16}px ${DOT_PADDING / 2}px, ${dot.color} 5px, transparent 5px)`,
+                  `radial-gradient(circle at ${12 + dot.authorIndex * 16}px ${DOT_PADDING / 2}px, ${ringColor} 7px, transparent 7px)`,
+                ])
+              : [];
+
+            return {
+              'data-line-number': lineNumber,
+              style: {
+                display: 'block',
+                cursor: onLineClick ? 'pointer' : undefined,
+                paddingTop: hasDots ? DOT_PADDING : undefined,
+                backgroundColor:
+                  activeCommentLine === lineNumber
+                    ? dark
+                      ? 'rgba(99,102,241,0.15)'
+                      : 'rgba(99,102,241,0.08)'
+                    : undefined,
+                backgroundImage: dotBgs.length > 0 ? dotBgs.join(', ') : undefined,
+                backgroundRepeat: dotBgs.length > 0 ? 'no-repeat' : undefined,
+              },
+              className: onLineClick ? 'code-line-clickable' : '',
+              onClick: onLineClick ? () => onLineClick(lineNumber) : undefined,
+            };
+          }}
           customStyle={{
             margin: 0,
             borderRadius: showHeader ? '0 0 0.5rem 0.5rem' : '0.5rem',
@@ -135,54 +146,23 @@ export default function CodeViewer({
           {code}
         </SyntaxHighlighter>
 
-        {/* Dot overlay — positioned in the paddingTop area above each commented line */}
-        {showDots &&
-          commentDots &&
-          commentDots.length > 0 &&
-          commentDots.map((dot) => {
-            const pos = linePositions.get(dot.line);
-            if (!pos) return null;
-            return (
-              <div
-                key={`dot-${dot.line}-${dot.authorIndex}`}
-                className="absolute z-10 cursor-pointer transition-transform hover:scale-150"
-                style={{
-                  top: pos.top + 5,
-                  left: 52 + dot.authorIndex * 16,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  backgroundColor: dot.color,
-                  boxShadow: `0 0 0 2px ${dark ? '#1e293b' : '#ffffff'}`,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onLineClick?.(dot.line);
-                }}
-              />
-            );
-          })}
+        {/* Inline comment card */}
+        {activeCommentLine != null &&
+          renderInlineCard &&
+          cardPosition && (
+            <div
+              className="absolute z-30"
+              style={{
+                top: cardPosition.top,
+                left: 48,
+                right: 16,
+                maxWidth: 400,
+              }}
+            >
+              {renderInlineCard(activeCommentLine)}
+            </div>
+          )}
       </div>
-
-      {/* Inline comment card */}
-      {activeCommentLine != null &&
-        renderInlineCard &&
-        linePositions.has(activeCommentLine) && (
-          <div
-            className="absolute z-30"
-            style={{
-              top:
-                (linePositions.get(activeCommentLine)?.top || 0) +
-                (linePositions.get(activeCommentLine)?.height || 0) +
-                4,
-              left: 48,
-              right: 16,
-              maxWidth: 400,
-            }}
-          >
-            {renderInlineCard(activeCommentLine)}
-          </div>
-        )}
     </div>
   );
 }
