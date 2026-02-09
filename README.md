@@ -1,6 +1,6 @@
 # Soootudy
 
-**https://soootudy.vercel.app**
+**https://soootudy.com**
 
 15기 서울 1반 스터디 저장소입니다.
 
