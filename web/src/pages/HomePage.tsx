@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { X, ExternalLink, Sparkles, Upload, History, ChevronRight } from 'lucide-react';
+import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
@@ -158,112 +158,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 오늘의 문제 */}
-      <section className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 rounded-xl p-6 border border-indigo-100 dark:border-indigo-900">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">오늘의 문제</h2>
-        </div>
-
-        {/* 문제 목록 */}
-        {loadingDaily ? (
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="w-20 h-20">
-              <DotLottieReact src="/cat.lottie" loop autoplay />
-            </div>
-          </div>
-        ) : dailyProblems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="w-24 h-24">
-              <DotLottieReact src="/cat.lottie" loop autoplay />
-            </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              오늘의 문제가 아직 등록되지 않았습니다.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {dailyProblems.map((problem) => {
-              const problemUrl = getProblemUrl(problem.problem_number, problem.source);
-              // 이 문제를 제출한 팀원 찾기
-              const problemName = `${problem.source}-${problem.problem_number}`;
-              const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
-              return (
-                <div
-                  key={problem.id}
-                  className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-3"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <SourceBadge source={problem.source} />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">
-                          {problem.problem_title}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {problem.source.toUpperCase()} {problem.problem_number}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {problemUrl && (
-                        <a
-                          href={problemUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
-                        >
-                          문제 보기
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {problem.source !== 'etc' && (
-                        <Link
-                          to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          제출
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 제출한 팀원 */}
-                  {solvers.length > 0 && (
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                      <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {solvers.map((sol) => {
-                          const solMember = members[sol.member];
-                          if (!solMember) return null;
-                          return (
-                            <Link
-                              key={sol.id}
-                              to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
-                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                              title={`${solMember.name} (${sol.week})`}
-                            >
-                              <img
-                                src={`https://github.com/${solMember.github}.png?size=20`}
-                                alt={solMember.name}
-                                className="w-4 h-4 rounded-full"
-                              />
-                              <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* 오늘의 할 일 */}
+      {/* 오늘의 할 일 (컴팩트 바) */}
       {!loadingDaily && dailyProblems.length > 0 && (
         <DailyTaskTracker
           dailyProblems={dailyProblems}
@@ -275,101 +170,214 @@ export default function HomePage() {
         />
       )}
 
-      {/* 이전 문제들 */}
-      {pastProblems.length > 0 && (
-        <section className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">이전 문제들</h2>
-            </div>
-            <Link
-              to="/daily-history"
-              className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              전체 보기
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+      {/* 문제 섹션 (오늘 + 이전 통합) */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">문제</h2>
           </div>
+          <Link
+            to="/daily-history"
+            className="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            전체 보기
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
 
-          <div className="space-y-2">
-            {pastProblems.map((problem) => {
-              const problemUrl = getProblemUrl(problem.problem_number, problem.source);
-              const problemName = `${problem.source}-${problem.problem_number}`;
-              const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
-              const dateLabel = new Date(problem.date + 'T00:00:00').toLocaleDateString('ko-KR', {
-                month: 'short',
-                day: 'numeric',
-              });
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          {/* 오늘의 문제 (그라데이션 강조) */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">오늘</h3>
+            </div>
 
-              return (
-                <div
-                  key={problem.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-                >
-                  <span className="text-xs text-slate-400 dark:text-slate-500 w-12 shrink-0">
-                    {dateLabel}
-                  </span>
-                  <SourceBadge source={problem.source} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-slate-900 dark:text-slate-100 font-medium truncate block">
-                      {problem.problem_title}
-                    </span>
-                  </div>
-                  {solvers.length > 0 && (
-                    <div className="flex -space-x-1">
-                      {solvers.slice(0, 3).map((sol) => {
-                        const solMember = members[sol.member];
-                        if (!solMember) return null;
-                        return (
-                          <Link
-                            key={sol.id}
-                            to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
-                            title={solMember.name}
-                          >
-                            <img
-                              src={`https://github.com/${solMember.github}.png?size=20`}
-                              alt={solMember.name}
-                              className="w-5 h-5 rounded-full border border-white dark:border-slate-800 hover:ring-2 hover:ring-indigo-400 transition-shadow"
-                            />
-                          </Link>
-                        );
-                      })}
-                      {solvers.length > 3 && (
-                        <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-600 text-[10px] flex items-center justify-center text-slate-600 dark:text-slate-300 border border-white dark:border-slate-800">
-                          +{solvers.length - 3}
-                        </span>
+            {loadingDaily ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <div className="w-16 h-16">
+                  <DotLottieReact src="/cat.lottie" loop autoplay />
+                </div>
+              </div>
+            ) : dailyProblems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <div className="w-20 h-20">
+                  <DotLottieReact src="/cat.lottie" loop autoplay />
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                  오늘의 문제가 아직 등록되지 않았습니다.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {dailyProblems.map((problem) => {
+                  const problemUrl = getProblemUrl(problem.problem_number, problem.source);
+                  const problemName = `${problem.source}-${problem.problem_number}`;
+                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
+                  return (
+                    <div
+                      key={problem.id}
+                      className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <SourceBadge source={problem.source} />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">
+                              {problem.problem_title}
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              {problem.source.toUpperCase()} {problem.problem_number}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {problemUrl && (
+                            <a
+                              href={problemUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
+                            >
+                              문제 보기
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {problem.source !== 'etc' && (
+                            <Link
+                              to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              제출
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 제출한 팀원 */}
+                      {solvers.length > 0 && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {solvers.map((sol) => {
+                              const solMember = members[sol.member];
+                              if (!solMember) return null;
+                              return (
+                                <Link
+                                  key={sol.id}
+                                  to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                  title={`${solMember.name} (${sol.week})`}
+                                >
+                                  <img
+                                    src={`https://github.com/${solMember.github}.png?size=20`}
+                                    alt={solMember.name}
+                                    className="w-4 h-4 rounded-full"
+                                  />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  )}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {problemUrl && (
-                      <a
-                        href={problemUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        문제 보기
-                      </a>
-                    )}
-                    {problem.source !== 'etc' && (
-                      <Link
-                        to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        제출
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </section>
-      )}
+
+          {/* 이전 문제들 */}
+          {pastProblems.length > 0 && (
+            <div className="p-5 border-t border-slate-200 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">이전</h3>
+              <div className="space-y-2">
+                {pastProblems.map((problem) => {
+                  const problemUrl = getProblemUrl(problem.problem_number, problem.source);
+                  const problemName = `${problem.source}-${problem.problem_number}`;
+                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
+                  const dateLabel = new Date(problem.date + 'T00:00:00').toLocaleDateString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                  });
+
+                  return (
+                    <div
+                      key={problem.id}
+                      className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 space-y-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 w-12 shrink-0">
+                          {dateLabel}
+                        </span>
+                        <SourceBadge source={problem.source} />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-slate-900 dark:text-slate-100 font-medium truncate block">
+                            {problem.problem_title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {problemUrl && (
+                            <a
+                              href={problemUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              문제 보기
+                            </a>
+                          )}
+                          {problem.source !== 'etc' && (
+                            <Link
+                              to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              제출
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 제출한 팀원 (아바타+이름 스타일) */}
+                      {solvers.length > 0 && (
+                        <div className="flex items-center gap-2 pl-12">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {solvers.map((sol) => {
+                              const solMember = members[sol.member];
+                              if (!solMember) return null;
+                              return (
+                                <Link
+                                  key={sol.id}
+                                  to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                  title={`${solMember.name} (${sol.week})`}
+                                >
+                                  <img
+                                    src={`https://github.com/${solMember.github}.png?size=20`}
+                                    alt={solMember.name}
+                                    className="w-4 h-4 rounded-full"
+                                  />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 팀원 카드 */}
       <section>
