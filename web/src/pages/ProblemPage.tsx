@@ -587,6 +587,24 @@ export default function ProblemPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [keyboardMode, currentCommentIndex, sortedComments, sameProblemMembers, currentMemberIndex, navigate, week, problemName]);
 
+  // 코드창 밖 클릭 시 댓글 네비게이션 모드 해제
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (keyboardMode !== 'comment-nav') return;
+
+      const target = e.target as HTMLElement;
+      const codeContainer = target.closest('[data-code-container]');
+
+      if (!codeContainer) {
+        setKeyboardMode('member-nav');
+        setPreviewCommentLine(null);
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [keyboardMode]);
+
   return (
     <div className={isWideMode ? '-mx-6 px-6' : ''}>
       <div className="space-y-6">
