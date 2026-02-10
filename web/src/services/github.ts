@@ -22,6 +22,7 @@ const MOCK_MEMBERS: Members = {
   ljy: { name: '임지영', github: 'limji02' },
   jhj: { name: '조희주', github: 'heemesama' },
   pse: { name: '박세은', github: 'pse3048-ui' },
+  mye: { name: '문영은', github: 'chloemoon01' },
 };
 
 const MOCK_TREE: GitHubTreeItem[] = [
