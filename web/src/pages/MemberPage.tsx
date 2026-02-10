@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { Flame, MessageSquare, Calendar } from 'lucide-react';
+import { Flame, MessageSquare, Calendar, Lock, Check } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
+import { useCharacters } from '../hooks/useCharacters';
+import { CHARACTERS, getCharacter } from '../lib/characters';
+import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities } from '../types';
 
 interface Context {
@@ -11,13 +14,24 @@ interface Context {
   problems: Problem[];
   activities: Activities;
   dark: boolean;
+  user: User;
 }
 
 export default function MemberPage() {
   const { id } = useParams<{ id: string }>();
-  const { members, problems, activities } = useOutletContext<Context>();
+  const { members, problems, activities, user } = useOutletContext<Context>();
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Set<string>>(new Set());
+  const [showCharacterPicker, setShowCharacterPicker] = useState(false);
+
+  const { selectedCharacter, unlockedCharacters, loading: charLoading, selectCharacter } = useCharacters(id ?? null);
+  const charDef = getCharacter(selectedCharacter);
+
+  const githubUsername = user?.user_metadata?.user_name || user?.user_metadata?.preferred_username;
+  const isOwner = useMemo(() => {
+    if (!githubUsername || !id) return false;
+    return members[id]?.github.toLowerCase() === githubUsername?.toLowerCase();
+  }, [members, id, githubUsername]);
 
   const member = id ? members[id] : undefined;
   if (!member || !id) {
@@ -76,10 +90,26 @@ export default function MemberPage() {
       {/* 프로필 헤더 */}
       <div className="flex items-start justify-between gap-5">
         <div className="flex items-center gap-5">
+          {/* 캐릭터 */}
+          <div className="relative shrink-0">
+            <div className="w-20 h-20">
+              {!charLoading && (
+                <DotLottieReact src={charDef.lottie} loop autoplay />
+              )}
+            </div>
+            {isOwner && (
+              <button
+                onClick={() => setShowCharacterPicker((v) => !v)}
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors whitespace-nowrap"
+              >
+                변경
+              </button>
+            )}
+          </div>
           <img
             src={`https://github.com/${member.github}.png?size=128`}
             alt={member.name}
-            className="w-16 h-16 rounded-full"
+            className="w-12 h-12 rounded-full shrink-0"
           />
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{member.name}</h1>
@@ -121,6 +151,49 @@ export default function MemberPage() {
           댓글 모아보기
         </Link>
       </div>
+
+      {/* 캐릭터 선택 */}
+      {isOwner && showCharacterPicker && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">캐릭터 선택</p>
+          <div className="grid grid-cols-4 gap-3">
+            {CHARACTERS.map((c) => {
+              const unlocked = unlockedCharacters.includes(c.id);
+              const selected = selectedCharacter === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => unlocked && selectCharacter(c.id)}
+                  disabled={!unlocked}
+                  className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                    selected
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
+                      : unlocked
+                        ? 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600'
+                        : 'border-slate-100 dark:border-slate-800 opacity-50'
+                  }`}
+                >
+                  <div className={`w-14 h-14 ${!unlocked ? 'grayscale' : ''}`}>
+                    <DotLottieReact src={c.lottie} loop autoplay />
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{c.name}</span>
+                  {!unlocked && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-white/60 dark:bg-slate-900/60">
+                      <Lock className="w-4 h-4 text-slate-400" />
+                      <span className="text-[10px] text-slate-400 mt-0.5">{c.description}</span>
+                    </div>
+                  )}
+                  {selected && (
+                    <div className="absolute top-1 right-1">
+                      <Check className="w-4 h-4 text-indigo-500" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 활동 히트맵 */}
       {activities[id] && (

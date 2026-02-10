@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -12,6 +12,7 @@ import { getKSTToday } from '../lib/date';
 import { useStudyConfig } from '../hooks/useStudyConfig';
 import { useDailyProgress } from '../hooks/useDailyProgress';
 import type { User } from '@supabase/supabase-js';
+import confetti from 'canvas-confetti';
 import type { Members, Problem, Activities, DailyProblem } from '../types';
 
 const PIGEON_MESSAGES = [
@@ -57,6 +58,29 @@ const PIGEON_MESSAGES = [
   '테스트 케이스를 믿지 마!',
 ];
 
+const CELEBRATION_MESSAGES = [
+  '오늘도 해냈다!',
+  '역시 프로...',
+  '퇴근 가능!',
+  '내일 또 보자~',
+  '완벽한 하루!',
+  '열정 그 자체!',
+  'AC 인생 AC!',
+  '오늘의 미션 클리어!',
+  '이 정도면 알고리즘 마스터!',
+  '꾸준함이 빛나는 순간!',
+  '수우터디 에이스!',
+  '오늘도 성장 완료!',
+  '칼퇴 준비 완료!',
+  '커밋하고 쉬자!',
+  '대단해, 진짜!',
+  '이게 바로 실력이야!',
+  '풀이 + 댓글 = 완벽!',
+  '오늘 할 일 끝! 야호!',
+  '스터디원의 모범!',
+  '내일의 나에게 박수!',
+];
+
 interface Context {
   members: Members;
   problems: Problem[];
@@ -96,6 +120,43 @@ export default function HomePage() {
   const [dailyProblems, setDailyProblems] = useState<DailyProblem[]>([]);
   const [pastProblems, setPastProblems] = useState<DailyProblem[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
+
+  const requiredComments = config?.required_comments ?? 3;
+
+  // 일일 과제 완료 판정
+  const allComplete = useMemo(() => {
+    if (!currentMemberId || loadingDaily || progressLoading || dailyProblems.length === 0) return false;
+    const allSubmitted = dailyProblems.every((dp) => {
+      const name = `${dp.source}-${dp.problem_number}`;
+      return problems.some((p) => p.member === currentMemberId && (p.baseName || p.name) === name);
+    });
+    return allSubmitted && commentCount >= requiredComments;
+  }, [currentMemberId, dailyProblems, problems, commentCount, requiredComments, loadingDaily, progressLoading]);
+
+  // 축하 메시지 (랜덤)
+  const [celebrationMessage] = useState(
+    () => CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]
+  );
+
+  // 축하 연출 (세션당 1회)
+  const celebrationFired = useRef(false);
+  useEffect(() => {
+    if (!allComplete || celebrationFired.current) return;
+    const key = `celebration_${getKSTToday()}`;
+    if (sessionStorage.getItem(key)) return;
+
+    celebrationFired.current = true;
+    sessionStorage.setItem(key, 'true');
+
+    const duration = 2500;
+    const end = Date.now() + duration;
+    const frame = () => {
+      confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#6366f1', '#10b981', '#f59e0b'] });
+      confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#6366f1', '#10b981', '#f59e0b'] });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    };
+    frame();
+  }, [allComplete]);
 
   const recentProblems = problems.slice(0, 8);
 
@@ -197,7 +258,7 @@ export default function HomePage() {
         {/* 말풍선 + 피전 */}
         <div className="relative w-48 mx-auto mb-2">
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full whitespace-nowrap px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{pigeonMessage}</p>
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{allComplete ? celebrationMessage : pigeonMessage}</p>
             {/* 말풍선 꼬리 */}
             <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 rotate-45 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700" />
           </div>
@@ -241,7 +302,7 @@ export default function HomePage() {
           problems={problems}
           currentMemberId={currentMemberId}
           commentCount={commentCount}
-          requiredComments={config?.required_comments ?? 3}
+          requiredComments={requiredComments}
           loading={loadingDaily || progressLoading}
         />
       )}
@@ -462,6 +523,7 @@ export default function HomePage() {
               member={member}
               problemCount={problems.filter((p) => p.member === id).length}
               streak={activities[id]?.streak}
+              completed={id === currentMemberId && allComplete}
             />
           ))}
         </div>

@@ -9,6 +9,10 @@ import confetti from 'canvas-confetti';
 import { supabase } from '../lib/supabase';
 import { fetchFileContent } from '../services/github';
 import { parseVersionFromName } from '../services/parser';
+import CharacterUnlockModal from '../components/CharacterUnlockModal';
+import { useCharacters } from '../hooks/useCharacters';
+import { CHARACTERS } from '../lib/characters';
+import type { CharacterDef } from '../lib/characters';
 import type { Members, Problem, Activities } from '../types';
 
 const SUCCESS_MESSAGES = [
@@ -59,7 +63,7 @@ function getCurrentWeek(): string {
 }
 
 export default function SubmitPage() {
-  const { members, dark, addProblem, activities } = useOutletContext<Context>();
+  const { members, problems: allProblems, dark, addProblem, activities } = useOutletContext<Context>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -97,6 +101,9 @@ export default function SubmitPage() {
   const [cheerMessage] = useState(() => CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)]);
   const confettiFired = useRef(false);
   const [editorHeight, setEditorHeight] = useState(300);
+  const [newlyUnlocked, setNewlyUnlocked] = useState<CharacterDef[]>([]);
+
+  const { checkAndUnlock } = useCharacters(memberId);
 
   const editWeek = editParts?.week;
   const currentWeek = useMemo(() => getCurrentWeek(), []);
@@ -173,6 +180,16 @@ export default function SubmitPage() {
       frame();
     }
   }, [successData]);
+
+  // 성공 시 캐릭터 해금 체크
+  useEffect(() => {
+    if (!successData || !memberId) return;
+    checkAndUnlock(allProblems, activities).then((newIds) => {
+      if (newIds.length > 0) {
+        setNewlyUnlocked(CHARACTERS.filter((c) => newIds.includes(c.id)));
+      }
+    });
+  }, [successData, memberId, checkAndUnlock, allProblems, activities]);
 
   async function handleSubmit() {
     setError(null);
@@ -281,6 +298,13 @@ export default function SubmitPage() {
           <ExternalLink className="w-4 h-4" />
           내 코드 보러가기
         </Link>
+
+        {newlyUnlocked.length > 0 && (
+          <CharacterUnlockModal
+            characters={newlyUnlocked}
+            onClose={() => setNewlyUnlocked([])}
+          />
+        )}
       </div>
     );
   }

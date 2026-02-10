@@ -103,6 +103,15 @@ export interface Reaction {
   created_at: string;
 }
 
+export interface MemberCharacter {
+  id: string;
+  member_id: string;
+  selected_character: string;
+  unlocked_characters: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Notification {
   id: string;
   user_id: string;
