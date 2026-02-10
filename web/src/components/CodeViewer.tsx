@@ -57,6 +57,12 @@ export default function CodeViewer({
   const [hoveredColumn, setHoveredColumn] = useState<number | undefined>(undefined);
   const [hoverPosition, setHoverPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [overflowPositions, setOverflowPositions] = useState<Array<{
+    dot: CommentDot;
+    top: number;
+    right: number;
+  }>>([]);
 
   // Group dots by line for lineProps lookup
   const dotsByLine = useMemo(() => {
@@ -104,6 +110,62 @@ export default function CodeViewer({
 
     return () => cancelAnimationFrame(id);
   }, [code]);
+
+  // Measure container width for overflow dot detection
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      setContainerWidth(entries[0].contentRect.width);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  // Overflow dots: dots positioned beyond visible container width
+  const overflowDotsByLine = useMemo(() => {
+    const map = new Map<number, CommentDot[]>();
+    if (!commentDots || !showDots || containerWidth <= 0) return map;
+    for (const dot of commentDots) {
+      const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
+      if (dotX > containerWidth - 16) {
+        if (!map.has(dot.line)) map.set(dot.line, []);
+        map.get(dot.line)!.push(dot);
+      }
+    }
+    return map;
+  }, [commentDots, showDots, containerWidth, lineNumWidth, charWidth]);
+
+  // Measure overflow dot overlay positions
+  useEffect(() => {
+    if (overflowDotsByLine.size === 0 || !containerRef.current) {
+      setOverflowPositions([]);
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
+      const positions: Array<{ dot: CommentDot; top: number; right: number }> = [];
+
+      for (const [line, dots] of overflowDotsByLine) {
+        const lineEl = container.querySelector(`[data-line-number="${line}"]`);
+        if (!lineEl) continue;
+        const lineRect = lineEl.getBoundingClientRect();
+        dots.forEach((dot, idx) => {
+          positions.push({
+            dot,
+            top: lineRect.top - containerRect.top + DOT_PADDING / 2 - 5,
+            right: 20 + idx * 14,
+          });
+        });
+      }
+
+      setOverflowPositions(positions);
+    });
+
+    return () => cancelAnimationFrame(id);
+  }, [overflowDotsByLine, commentDots, containerWidth]);
 
   // Find nearest dot for arrow color (click card)
   const activeArrowDot = useMemo(() => {
@@ -165,6 +227,12 @@ export default function CodeViewer({
       }
 
       const containerWidth = containerRect.width;
+
+      // Clamp dotX for overflow dots (positioned beyond visible width)
+      if (containerWidth > 0 && dotX > containerWidth - 16) {
+        dotX = containerWidth - 24;
+      }
+
       const maxCardWidth = 380;
       const cardLeft = Math.max(16, Math.min(dotX - 20, containerWidth - maxCardWidth - 16));
       const arrowLeft = Math.max(10, Math.min(dotX - cardLeft, maxCardWidth - 10));
@@ -447,6 +515,54 @@ export default function CodeViewer({
               </div>
             </div>
           )}
+
+        {/* Overflow dot indicators — dots beyond visible width */}
+        {overflowPositions.map(({ dot, top, right }) => (
+          <div
+            key={`overflow-${dot.line}-${dot.column}-${dot.offsetIndex}`}
+            className="absolute z-10 cursor-pointer"
+            style={{
+              top,
+              right,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: dot.color,
+              boxShadow: `0 0 0 2px ${dark ? '#1e293b' : '#ffffff'}`,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLineClick?.(dot.line, dot.column, true);
+            }}
+            onMouseEnter={() => {
+              if (!renderHoverPreview || !containerRef.current) return;
+              if (hoverTimerRef.current) {
+                clearTimeout(hoverTimerRef.current);
+                hoverTimerRef.current = null;
+              }
+              const container = containerRef.current;
+              const cRect = container.getBoundingClientRect();
+              const lineEl = container.querySelector(`[data-line-number="${dot.line}"]`);
+              if (!lineEl) return;
+              const lRect = lineEl.getBoundingClientRect();
+              const hoverTop = lRect.bottom - cRect.top + 8;
+              const dotVisualX = cRect.width - right;
+              const maxW = 340;
+              const cardLeft = Math.max(16, Math.min(dotVisualX - 20, cRect.width - maxW - 16));
+              const arrowLeft = Math.max(10, Math.min(dotVisualX - cardLeft, maxW - 10));
+              setHoveredLine(dot.line);
+              setHoveredColumn(dot.column);
+              setHoverPosition({ top: hoverTop, left: cardLeft, arrowLeft });
+            }}
+            onMouseLeave={() => {
+              if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+              hoverTimerRef.current = null;
+              setHoveredLine(null);
+              setHoveredColumn(undefined);
+              setHoverPosition(null);
+            }}
+          />
+        ))}
       </div>
     </div>
   );
