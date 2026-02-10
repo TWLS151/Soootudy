@@ -75,6 +75,22 @@ export function useCodeBookmarks(userId: string | null) {
 
       const existing = bookmarks.find((b) => b.problem_id === problemId);
 
+      // Optimistic update - 즉시 UI 업데이트
+      if (existing) {
+        // Remove from local state immediately
+        setBookmarks((prev) => prev.filter((b) => b.id !== existing.id));
+      } else {
+        // Add to local state immediately
+        const optimisticBookmark: CodeBookmark = {
+          id: `temp-${Date.now()}`,
+          user_id: userId,
+          problem_id: problemId,
+          memo: null,
+          created_at: new Date().toISOString(),
+        };
+        setBookmarks((prev) => [optimisticBookmark, ...prev]);
+      }
+
       try {
         if (existing) {
           // Remove bookmark
@@ -100,10 +116,12 @@ export function useCodeBookmarks(userId: string | null) {
         }
       } catch (error) {
         console.error('Failed to toggle bookmark:', error);
+        // Revert optimistic update on error
+        await loadBookmarks();
         return isBookmarked(problemId); // Return current state on error
       }
     },
-    [userId, bookmarks, isBookmarked]
+    [userId, bookmarks, isBookmarked, loadBookmarks]
   );
 
   const updateMemo = useCallback(
