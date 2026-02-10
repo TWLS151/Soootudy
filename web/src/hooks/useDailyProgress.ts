@@ -16,17 +16,15 @@ export function useDailyProgress(githubUsername: string | null, memberId: string
       const today = getKSTToday();
       // KST 경계: today 00:00 KST ~ tomorrow 00:00 KST
       const startOfDayKST = `${today}T00:00:00+09:00`;
-      const todayDate = new Date(startOfDayKST);
-      const tomorrow = new Date(todayDate.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
-      const endOfDayKST = `${tomorrowStr}T00:00:00+09:00`;
+      const endDate = new Date(new Date(startOfDayKST).getTime() + 24 * 60 * 60 * 1000);
+      const endOfDayUTC = endDate.toISOString();
 
       const { count, error } = await supabase
         .from('comments')
         .select('*', { count: 'exact', head: true })
         .eq('github_username', githubUsername)
         .gte('created_at', startOfDayKST)
-        .lt('created_at', endOfDayKST)
+        .lt('created_at', endOfDayUTC)
         .not('problem_id', 'like', `${memberId}/%`);
 
       if (error) throw error;
