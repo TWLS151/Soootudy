@@ -4,12 +4,12 @@ import { createCommentNotification } from '../services/notifications';
 import type { Comment, Members, Reaction } from '../types';
 
 const AUTHOR_COLORS = [
-  { dot: '#3b82f6', bgClass: 'bg-blue-50 dark:bg-blue-950/30', borderClass: 'border-blue-200 dark:border-blue-800' },
-  { dot: '#10b981', bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', borderClass: 'border-emerald-200 dark:border-emerald-800' },
-  { dot: '#f59e0b', bgClass: 'bg-amber-50 dark:bg-amber-950/30', borderClass: 'border-amber-200 dark:border-amber-800' },
-  { dot: '#ec4899', bgClass: 'bg-pink-50 dark:bg-pink-950/30', borderClass: 'border-pink-200 dark:border-pink-800' },
-  { dot: '#6366f1', bgClass: 'bg-indigo-50 dark:bg-indigo-950/30', borderClass: 'border-indigo-200 dark:border-indigo-800' },
-  { dot: '#14b8a6', bgClass: 'bg-teal-50 dark:bg-teal-950/30', borderClass: 'border-teal-200 dark:border-teal-800' },
+  { dot: '#3b82f6', bgClass: 'bg-blue-50 dark:bg-blue-950/30', borderClass: 'border-blue-200 dark:border-blue-800', bgLight: '#eff6ff', bgDark: 'rgba(23,37,84,0.3)', borderLight: '#bfdbfe', borderDark: '#1e40af' },
+  { dot: '#10b981', bgClass: 'bg-emerald-50 dark:bg-emerald-950/30', borderClass: 'border-emerald-200 dark:border-emerald-800', bgLight: '#ecfdf5', bgDark: 'rgba(2,44,34,0.3)', borderLight: '#a7f3d0', borderDark: '#065f46' },
+  { dot: '#f59e0b', bgClass: 'bg-amber-50 dark:bg-amber-950/30', borderClass: 'border-amber-200 dark:border-amber-800', bgLight: '#fffbeb', bgDark: 'rgba(69,26,3,0.3)', borderLight: '#fde68a', borderDark: '#92400e' },
+  { dot: '#ec4899', bgClass: 'bg-pink-50 dark:bg-pink-950/30', borderClass: 'border-pink-200 dark:border-pink-800', bgLight: '#fdf2f8', bgDark: 'rgba(80,7,36,0.3)', borderLight: '#fbcfe8', borderDark: '#9d174d' },
+  { dot: '#6366f1', bgClass: 'bg-indigo-50 dark:bg-indigo-950/30', borderClass: 'border-indigo-200 dark:border-indigo-800', bgLight: '#eef2ff', bgDark: 'rgba(30,27,75,0.3)', borderLight: '#c7d2fe', borderDark: '#3730a3' },
+  { dot: '#14b8a6', bgClass: 'bg-teal-50 dark:bg-teal-950/30', borderClass: 'border-teal-200 dark:border-teal-800', bgLight: '#f0fdfa', bgDark: 'rgba(4,47,46,0.3)', borderLight: '#99f6e4', borderDark: '#115e59' },
 ];
 
 export type AuthorColor = (typeof AUTHOR_COLORS)[0];
@@ -19,6 +19,10 @@ export interface CommentDot {
   column: number; // character column position
   color: string;
   offsetIndex: number; // offset for overlapping dots at same position
+  bgLight: string;
+  bgDark: string;
+  borderLight: string;
+  borderDark: string;
 }
 
 export interface CodeCommentUser {
@@ -185,7 +189,13 @@ export function useCodeComments(problemId: string, members?: Members) {
         positionOffsets.set(posKey, offsetIndex + 1);
 
         const color = authorColorMap.get(author);
-        result.push({ line, column, color: color?.dot || '#6366f1', offsetIndex });
+        result.push({
+          line, column, color: color?.dot || '#6366f1', offsetIndex,
+          bgLight: color?.bgLight || '#eef2ff',
+          bgDark: color?.bgDark || 'rgba(30,27,75,0.3)',
+          borderLight: color?.borderLight || '#c7d2fe',
+          borderDark: color?.borderDark || '#3730a3',
+        });
       }
     }
     return result;

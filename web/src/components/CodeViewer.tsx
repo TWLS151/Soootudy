@@ -105,6 +105,32 @@ export default function CodeViewer({
     return () => cancelAnimationFrame(id);
   }, [code]);
 
+  // Find nearest dot for arrow color (click card)
+  const activeArrowDot = useMemo(() => {
+    if (activeCommentLine == null || previewDot) return null;
+    const lineDots = dotsByLine.get(activeCommentLine) || [];
+    let nearest: CommentDot | null = null;
+    let minDist = Infinity;
+    for (const dot of lineDots) {
+      const dist = Math.abs(dot.column - (activeCommentColumn ?? 0));
+      if (dist < minDist) { minDist = dist; nearest = dot; }
+    }
+    return nearest;
+  }, [activeCommentLine, activeCommentColumn, dotsByLine, previewDot]);
+
+  // Find nearest dot for arrow color (hover preview)
+  const hoverArrowDot = useMemo(() => {
+    if (hoveredLine == null) return null;
+    const lineDots = dotsByLine.get(hoveredLine) || [];
+    let nearest: CommentDot | null = null;
+    let minDist = Infinity;
+    for (const dot of lineDots) {
+      const dist = Math.abs(dot.column - (hoveredColumn ?? 0));
+      if (dist < minDist) { minDist = dist; nearest = dot; }
+    }
+    return nearest;
+  }, [hoveredLine, hoveredColumn, dotsByLine]);
+
   // Calculate inline card position when active line changes
   useEffect(() => {
     if (activeCommentLine == null || !containerRef.current) {
@@ -371,11 +397,15 @@ export default function CodeViewer({
             >
               {/* Speech bubble arrow pointing up to the dot */}
               <div
-                className="absolute w-[10px] h-[10px] rotate-45 border-l border-t border-slate-200 dark:border-slate-700"
+                className="absolute w-[10px] h-[10px] rotate-45"
                 style={{
-                  top: -5,
+                  top: -4,
                   left: cardPosition.arrowLeft - 5,
-                  backgroundColor: dark ? 'rgb(30,41,59)' : 'white',
+                  backgroundColor: activeArrowDot
+                    ? (dark ? activeArrowDot.bgDark : activeArrowDot.bgLight)
+                    : (dark ? 'rgb(30,41,59)' : 'white'),
+                  borderLeft: `1px solid ${activeArrowDot ? (dark ? activeArrowDot.borderDark : activeArrowDot.borderLight) : (dark ? '#334155' : '#e2e8f0')}`,
+                  borderTop: `1px solid ${activeArrowDot ? (dark ? activeArrowDot.borderDark : activeArrowDot.borderLight) : (dark ? '#334155' : '#e2e8f0')}`,
                   zIndex: 1,
                 }}
               />
@@ -400,11 +430,15 @@ export default function CodeViewer({
             >
               {/* Speech bubble arrow pointing up to the dot */}
               <div
-                className="absolute w-[10px] h-[10px] rotate-45 border-l border-t border-slate-200 dark:border-slate-700"
+                className="absolute w-[10px] h-[10px] rotate-45"
                 style={{
-                  top: -5,
+                  top: -4,
                   left: hoverPosition.arrowLeft - 5,
-                  backgroundColor: dark ? 'rgb(30,41,59)' : 'white',
+                  backgroundColor: hoverArrowDot
+                    ? (dark ? hoverArrowDot.bgDark : hoverArrowDot.bgLight)
+                    : (dark ? 'rgb(30,41,59)' : 'white'),
+                  borderLeft: `1px solid ${hoverArrowDot ? (dark ? hoverArrowDot.borderDark : hoverArrowDot.borderLight) : (dark ? '#334155' : '#e2e8f0')}`,
+                  borderTop: `1px solid ${hoverArrowDot ? (dark ? hoverArrowDot.borderDark : hoverArrowDot.borderLight) : (dark ? '#334155' : '#e2e8f0')}`,
                   zIndex: 1,
                 }}
               />
