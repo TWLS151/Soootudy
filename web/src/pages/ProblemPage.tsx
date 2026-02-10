@@ -6,7 +6,7 @@ import SourceBadge from '../components/SourceBadge';
 import InlineCommentCard from '../components/InlineCommentCard';
 import CodeCommentPanel from '../components/CodeCommentPanel';
 import { useCodeComments } from '../hooks/useCodeComments';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, MessageSquare, Circle } from 'lucide-react';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, MessageSquare, Circle, Copy } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
@@ -51,6 +51,9 @@ export default function ProblemPage() {
   const [activeCommentColumn, setActiveCommentColumn] = useState<number>(0);
   const activeCommentColumnRef = useRef<number>(0);
   const hasAutoOpenedPanel = useRef(false);
+  const [showCopyTip, setShowCopyTip] = useState(() => {
+    return localStorage.getItem('copyTipDismissed') !== 'true';
+  });
 
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
@@ -213,6 +216,63 @@ export default function ProblemPage() {
     activeCommentColumnRef.current = columnNumber;
     setActiveCommentColumn(columnNumber);
   }, []);
+
+  // 코드 복사
+  const handleCopyCode = useCallback(() => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+  }, [code]);
+
+  // 코드+댓글 복사 (익명화)
+  const handleCopyWithComments = useCallback(() => {
+    if (!code) return;
+    const allComments = commentData.comments;
+    if (allComments.length === 0) {
+      navigator.clipboard.writeText(code);
+      return;
+    }
+
+    // 작성자 익명화: github_username → 리뷰어 A, B, C...
+    const authorMap = new Map<string, string>();
+    const LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const sorted = [...allComments].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    for (const c of sorted) {
+      if (!authorMap.has(c.github_username)) {
+        const idx = authorMap.size;
+        authorMap.set(c.github_username, `리뷰어 ${idx < LABELS.length ? LABELS[idx] : String(idx + 1)}`);
+      }
+    }
+
+    // 댓글을 줄 번호별로 그룹핑 (최상위만)
+    const topComments = allComments
+      .filter((c) => !c.parent_id && c.line_number != null)
+      .sort((a, b) => (a.line_number ?? 0) - (b.line_number ?? 0) || new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const lines: string[] = [];
+    lines.push(code);
+    lines.push('');
+    lines.push('─'.repeat(40));
+    lines.push('댓글');
+    lines.push('─'.repeat(40));
+
+    for (const comment of topComments) {
+      const label = authorMap.get(comment.github_username) ?? '익명';
+      lines.push(`[${comment.line_number}번째 줄] ${label}: ${comment.content}`);
+
+      // 답글
+      const replies = allComments
+        .filter((c) => c.parent_id === comment.id)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      for (const reply of replies) {
+        const replyLabel = authorMap.get(reply.github_username) ?? '익명';
+        lines.push(`  ↳ ${replyLabel}: ${reply.content}`);
+      }
+    }
+
+    navigator.clipboard.writeText(lines.join('\n'));
+  }, [code, commentData.comments]);
 
   // 인라인 카드 렌더 — 점 근처 클릭이면 답글, 아니면 새 댓글
   const renderInlineCard = useCallback(
@@ -508,6 +568,26 @@ export default function ProblemPage() {
                 </div>
               )}
 
+              {/* 복사 기능 안내 (1회) */}
+              {showCopyTip && !loading && activeTab === 'code' && code && (
+                <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 text-sm">
+                  <Copy className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <p className="flex-1 text-indigo-700 dark:text-indigo-300">
+                    코드 상단에 <strong>복사</strong> / <strong>코드+댓글</strong> 버튼이 추가되었습니다!
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowCopyTip(false);
+                      localStorage.setItem('copyTipDismissed', 'true');
+                    }}
+                    className="p-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-400 dark:text-indigo-500 transition-colors shrink-0"
+                    aria-label="닫기"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* 콘텐츠 */}
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
@@ -522,6 +602,8 @@ export default function ProblemPage() {
                   dark={dark}
                   expanded={expanded}
                   onToggleExpand={() => setExpanded(!expanded)}
+                  onCopyCode={handleCopyCode}
+                  onCopyWithComments={commentData.comments.length > 0 ? handleCopyWithComments : undefined}
                   onLineClick={handleLineClick}
                   commentDots={commentData.dots}
                   showDots={showDots}

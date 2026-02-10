@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, Copy, ClipboardCheck, MessageSquareCode } from 'lucide-react';
 import type { CommentDot } from '../hooks/useCodeComments';
 
 interface CodeViewerProps {
@@ -12,6 +12,8 @@ interface CodeViewerProps {
   title?: string;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  onCopyCode?: () => void;
+  onCopyWithComments?: () => void;
   // Comment integration
   onLineClick?: (lineNumber: number, columnNumber: number) => void;
   commentDots?: CommentDot[];
@@ -30,6 +32,8 @@ export default function CodeViewer({
   title,
   expanded,
   onToggleExpand,
+  onCopyCode,
+  onCopyWithComments,
   onLineClick,
   commentDots,
   showDots,
@@ -40,6 +44,8 @@ export default function CodeViewer({
   const [cardPosition, setCardPosition] = useState<{ top: number } | null>(null);
   const [charWidth, setCharWidth] = useState(8.4);
   const [lineNumWidth, setLineNumWidth] = useState(48);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [commentsCopied, setCommentsCopied] = useState(false);
 
   // Group dots by line for lineProps lookup
   const dotsByLine = useMemo(() => {
@@ -120,19 +126,57 @@ export default function CodeViewer({
           ) : (
             <span className="text-xs text-slate-500 dark:text-slate-400">Python</span>
           )}
-          {onToggleExpand && (
-            <button
-              onClick={onToggleExpand}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-            >
-              {expanded ? (
-                <Minimize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5" />
-              )}
-              {expanded ? '축소' : '확장'}
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onCopyCode && (
+              <button
+                onClick={() => {
+                  onCopyCode();
+                  setCodeCopied(true);
+                  setTimeout(() => setCodeCopied(false), 2000);
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                title="코드 복사"
+              >
+                {codeCopied ? (
+                  <ClipboardCheck className="w-3.5 h-3.5 text-green-500" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+                {codeCopied ? '복사됨' : '복사'}
+              </button>
+            )}
+            {onCopyWithComments && (
+              <button
+                onClick={() => {
+                  onCopyWithComments();
+                  setCommentsCopied(true);
+                  setTimeout(() => setCommentsCopied(false), 2000);
+                }}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                title="코드 + 댓글 복사"
+              >
+                {commentsCopied ? (
+                  <ClipboardCheck className="w-3.5 h-3.5 text-green-500" />
+                ) : (
+                  <MessageSquareCode className="w-3.5 h-3.5" />
+                )}
+                {commentsCopied ? '복사됨' : '코드+댓글'}
+              </button>
+            )}
+            {onToggleExpand && (
+              <button
+                onClick={onToggleExpand}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+              >
+                {expanded ? (
+                  <Minimize2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Maximize2 className="w-3.5 h-3.5" />
+                )}
+                {expanded ? '축소' : '확장'}
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="relative" ref={containerRef}>
