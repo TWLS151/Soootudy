@@ -120,6 +120,29 @@ export default function CodeViewer({
     return () => cancelAnimationFrame(id);
   }, [code]);
 
+  // Auto-show preview when previewDot changes (keyboard navigation)
+  useEffect(() => {
+    if (!previewDot || !renderHoverPreview || !containerRef.current) {
+      return;
+    }
+
+    const container = containerRef.current;
+    const lineEl = container.querySelector(`[data-line-number="${previewDot.line}"]`);
+    if (!lineEl) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const lineRect = lineEl.getBoundingClientRect();
+    const hoverTop = lineRect.bottom - containerRect.top + 8;
+    const dotVisualX = lineNumWidth + previewDot.column * charWidth;
+    const maxW = 340;
+    const cardLeft = Math.max(16, Math.min(dotVisualX - 20, containerRect.width - maxW - 16));
+    const arrowLeft = Math.max(10, Math.min(dotVisualX - cardLeft, maxW - 10));
+
+    setHoveredLine(previewDot.line);
+    setHoveredColumn(previewDot.column);
+    setHoverPosition({ top: hoverTop, left: cardLeft, arrowLeft });
+  }, [previewDot, renderHoverPreview, lineNumWidth, charWidth]);
+
   // Measure container width for overflow dot detection
   useEffect(() => {
     const container = containerRef.current;
@@ -252,32 +275,49 @@ export default function CodeViewer({
   }, [activeCommentLine, activeCommentColumn, commentDots, dotsByLine, lineNumWidth, charWidth, previewDot]);
 
   return (
-    <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>
+    <div
+      className={`rounded-lg border transition-all ${
+        keyboardMode === 'comment-nav'
+          ? 'border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-200 dark:ring-indigo-800'
+          : 'border-slate-200 dark:border-slate-700'
+      }`}
+      data-code-container
+    >
       {showHeader && (
-        <div className="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 rounded-t-lg">
+        <div
+          onClick={(e) => {
+            // 버튼이 아닌 영역 클릭 시에만 댓글 네비게이션 모드 활성화
+            if (onHeaderClick && commentCount > 0 && !title) {
+              const target = e.target as HTMLElement;
+              // 버튼이나 버튼 내부 요소가 아닐 때만 실행
+              if (!target.closest('button')) {
+                onHeaderClick();
+              }
+            }
+          }}
+          className={`flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 rounded-t-lg transition-colors ${
+            !title && onHeaderClick && commentCount > 0 ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700' : ''
+          }`}
+        >
           {title ? (
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               {title}
             </span>
           ) : (
-            <button
-              onClick={onHeaderClick}
-              className={`flex items-center gap-2 text-xs transition-colors ${
-                keyboardMode === 'comment-nav'
-                  ? 'text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer'
-              }`}
-              disabled={!onHeaderClick || commentCount === 0}
-            >
+            <div className={`flex items-center gap-2 text-xs transition-colors ${
+              keyboardMode === 'comment-nav'
+                ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
               <span>Python</span>
               {keyboardMode === 'comment-nav' && commentCount > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
                   ↑↓ {currentCommentIndex !== undefined ? `${currentCommentIndex + 1}/${commentCount}` : `${commentCount}개`}
                 </span>
               )}
-            </button>
+            </div>
           )}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             {onCopyCode && (
               <button
                 onClick={() => {
