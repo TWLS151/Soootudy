@@ -15,13 +15,14 @@ interface CodeViewerProps {
   onCopyCode?: () => void;
   onCopyWithComments?: () => void;
   // Comment integration
-  onLineClick?: (lineNumber: number, columnNumber: number) => void;
+  onLineClick?: (lineNumber: number, columnNumber: number, clickedOnDot: boolean) => void;
   commentDots?: CommentDot[];
   showDots?: boolean;
   activeCommentLine?: number | null;
   activeCommentColumn?: number;
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
   renderHoverPreview?: (lineNumber: number) => React.ReactNode | null;
+  previewDot?: { line: number; column: number } | null;
 }
 
 const DOT_PADDING = 20;
@@ -44,6 +45,7 @@ export default function CodeViewer({
   activeCommentColumn,
   renderInlineCard,
   renderHoverPreview,
+  previewDot,
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardPosition, setCardPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
@@ -216,11 +218,12 @@ export default function CodeViewer({
           wrapLines
           lineProps={(lineNumber: number) => {
             const lineDots = showDots ? (dotsByLine.get(lineNumber) || []) : [];
-            const hasDots = lineDots.length > 0;
+            const hasPreviewDot = previewDot && previewDot.line === lineNumber;
+            const hasDots = lineDots.length > 0 || hasPreviewDot;
 
             // Render dots as CSS radial-gradient at character column positions
             const ringColor = dark ? '#1e293b' : '#ffffff';
-            const dotBgs = hasDots
+            const dotBgs = lineDots.length > 0
               ? lineDots.flatMap((dot) => {
                   const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
                   return [
@@ -229,6 +232,15 @@ export default function CodeViewer({
                   ];
                 })
               : [];
+
+            // Add preview dot (pulsing, semi-transparent)
+            if (hasPreviewDot && previewDot) {
+              const pvX = lineNumWidth + previewDot.column * charWidth;
+              dotBgs.push(
+                `radial-gradient(circle at ${pvX}px ${DOT_PADDING / 2}px, rgba(99,102,241,0.5) 5px, transparent 5px)`,
+                `radial-gradient(circle at ${pvX}px ${DOT_PADDING / 2}px, ${ringColor} 7px, transparent 7px)`,
+              );
+            }
 
             return {
               'data-line-number': lineNumber,
@@ -253,7 +265,23 @@ export default function CodeViewer({
                     const codeStartX = lineRect.left + lineNumWidth;
                     const xOffset = e.clientX - codeStartX;
                     const column = Math.max(0, Math.round(xOffset / charWidth));
-                    onLineClick(lineNumber, column);
+
+                    // Detect if click was near an existing dot
+                    const mouseX = e.clientX - lineRect.left;
+                    const mouseY = e.clientY - lineRect.top;
+                    let clickedOnDot = false;
+                    for (const dot of lineDots) {
+                      const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
+                      const dotY = DOT_PADDING / 2;
+                      const dx = mouseX - dotX;
+                      const dy = mouseY - dotY;
+                      if (Math.sqrt(dx * dx + dy * dy) < DOT_HIT_RADIUS) {
+                        clickedOnDot = true;
+                        break;
+                      }
+                    }
+
+                    onLineClick(lineNumber, column, clickedOnDot);
                   }
                 : undefined,
               onMouseMove: hasDots && renderHoverPreview

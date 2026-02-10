@@ -286,6 +286,7 @@ export default function CodeCommentPanel({
                             reactions={reactions}
                             currentUserId={user?.id ?? null}
                             onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
+                            resolveDisplayName={(u) => resolveDisplayName(u, members)}
                           />
                         )}
                       </>
@@ -325,6 +326,7 @@ export default function CodeCommentPanel({
                                     reactions={reactions}
                                     currentUserId={user?.id ?? null}
                                     onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                                    resolveDisplayName={(u) => resolveDisplayName(u, members)}
                                   />
                                 )}
                               </div>
@@ -347,11 +349,16 @@ export default function CodeCommentPanel({
                         />
                         <textarea
                           value={replyContent}
-                          onChange={(e) => setReplyContent(e.target.value)}
+                          onChange={(e) => {
+                            setReplyContent(e.target.value);
+                            const el = e.target;
+                            el.style.height = 'auto';
+                            el.style.height = el.scrollHeight + 'px';
+                          }}
                           placeholder="답글..."
                           rows={1}
                           autoFocus
-                          className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                          className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none overflow-hidden"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();

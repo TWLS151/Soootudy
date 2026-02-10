@@ -9,27 +9,30 @@ interface ReactionBarProps {
   reactions: Reaction[];
   currentUserId: string | null;
   onToggle: (emoji: string) => void;
+  resolveDisplayName?: (githubUsername: string) => string;
 }
 
-export default function ReactionBar({ commentId, reactions, currentUserId, onToggle }: ReactionBarProps) {
+export default function ReactionBar({ commentId, reactions, currentUserId, onToggle, resolveDisplayName }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // 이모지별 그룹핑
   const grouped = useMemo(() => {
-    const map = new Map<string, { count: number; hasReacted: boolean }>();
+    const map = new Map<string, { count: number; hasReacted: boolean; usernames: string[] }>();
     for (const r of reactions) {
       if (r.comment_id !== commentId) continue;
+      const displayName = resolveDisplayName ? resolveDisplayName(r.github_username) : r.github_username;
       const existing = map.get(r.emoji);
       if (existing) {
         existing.count++;
+        existing.usernames.push(displayName);
         if (r.user_id === currentUserId) existing.hasReacted = true;
       } else {
-        map.set(r.emoji, { count: 1, hasReacted: r.user_id === currentUserId });
+        map.set(r.emoji, { count: 1, hasReacted: r.user_id === currentUserId, usernames: [displayName] });
       }
     }
     return map;
-  }, [reactions, commentId, currentUserId]);
+  }, [reactions, commentId, currentUserId, resolveDisplayName]);
 
   // 피커 외부 클릭 시 닫기
   useEffect(() => {
@@ -50,10 +53,11 @@ export default function ReactionBar({ commentId, reactions, currentUserId, onTog
       {/* 기존 리액션 버블 */}
       {Array.from(grouped.entries())
         .sort((a, b) => EMOJI_OPTIONS.indexOf(a[0]) - EMOJI_OPTIONS.indexOf(b[0]))
-        .map(([emoji, { count, hasReacted }]) => (
+        .map(([emoji, { count, hasReacted, usernames }]) => (
           <button
             key={emoji}
             onClick={() => onToggle(emoji)}
+            title={usernames.join(', ')}
             className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs border transition-all hover:scale-105 ${
               hasReacted
                 ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700'

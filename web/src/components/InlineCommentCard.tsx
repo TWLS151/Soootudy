@@ -17,6 +17,7 @@ interface InlineCommentCardProps {
   dark: boolean;
   reactions?: Reaction[];
   onToggleReaction?: (commentId: string, emoji: string) => void;
+  inputOnly?: boolean;
 }
 
 function formatDate(dateString: string) {
@@ -56,6 +57,7 @@ export default function InlineCommentCard({
   dark,
   reactions = [],
   onToggleReaction,
+  inputOnly = false,
 }: InlineCommentCardProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -144,7 +146,7 @@ export default function InlineCommentCard({
       </div>
 
       {/* Existing comments */}
-      {comments.length > 0 && (
+      {!inputOnly && comments.length > 0 && (
         <div className="px-2.5 py-1.5 space-y-2 max-h-48 overflow-y-auto">
           {comments.map((comment) => {
             const replies = getReplies(comment.id);
@@ -187,6 +189,7 @@ export default function InlineCommentCard({
                         reactions={reactions}
                         currentUserId={user?.id ?? null}
                         onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
+                        resolveDisplayName={(u) => resolveDisplayName(u, members)}
                       />
                     )}
                   </div>
@@ -225,6 +228,7 @@ export default function InlineCommentCard({
                                 reactions={reactions}
                                 currentUserId={user?.id ?? null}
                                 onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                                resolveDisplayName={(u) => resolveDisplayName(u, members)}
                               />
                             )}
                           </div>
@@ -252,10 +256,16 @@ export default function InlineCommentCard({
             <textarea
               ref={inputRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                setContent(e.target.value);
+                // Auto-expand
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+              }}
               placeholder={replyTo ? '답글...' : '댓글...'}
               rows={1}
-              className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+              className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none overflow-hidden"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();

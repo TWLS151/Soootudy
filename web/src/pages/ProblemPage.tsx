@@ -51,6 +51,7 @@ export default function ProblemPage() {
   const [activeCommentLine, setActiveCommentLine] = useState<number | null>(null);
   const [activeCommentColumn, setActiveCommentColumn] = useState<number>(0);
   const activeCommentColumnRef = useRef<number>(0);
+  const [clickedOnDot, setClickedOnDot] = useState(false);
   const hasAutoOpenedPanel = useRef(false);
   const [showCopyTip, setShowCopyTip] = useState(() => {
     return localStorage.getItem('copyTipDismissed') !== 'true';
@@ -207,7 +208,7 @@ export default function ProblemPage() {
   }, [problem]);
 
   // 라인 클릭 핸들러 — 같은 줄+같은 칼럼이면 토글, 다른 칼럼이면 위치만 갱신
-  const handleLineClick = useCallback((lineNumber: number, columnNumber: number) => {
+  const handleLineClick = useCallback((lineNumber: number, columnNumber: number, onDot: boolean) => {
     setActiveCommentLine((prev) => {
       if (prev === lineNumber && activeCommentColumnRef.current === columnNumber) {
         return null; // 같은 위치 → 닫기
@@ -216,6 +217,7 @@ export default function ProblemPage() {
     });
     activeCommentColumnRef.current = columnNumber;
     setActiveCommentColumn(columnNumber);
+    setClickedOnDot(onDot);
   }, []);
 
   // 코드 복사
@@ -323,6 +325,12 @@ export default function ProblemPage() {
                         reactions={commentData.reactions}
                         currentUserId={null}
                         onToggle={() => {}}
+                        resolveDisplayName={(u) => {
+                          for (const m of Object.values(members)) {
+                            if (m.github.toLowerCase() === u.toLowerCase()) return m.name;
+                          }
+                          return u;
+                        }}
                       />
                     )}
                   </div>
@@ -375,6 +383,8 @@ export default function ProblemPage() {
         const commentCol = c.column_number ?? 0;
         return Math.abs(commentCol - activeCommentColumn) <= 2;
       });
+      // inputOnly: 빈 줄 클릭(마커 아님) + 기존 댓글이 있을 때만 입력창만 표시
+      const showInputOnly = !clickedOnDot && lineComments.length > 0;
       return (
         <InlineCommentCard
           key={`${lineNumber}-${activeCommentColumn}`}
@@ -392,10 +402,11 @@ export default function ProblemPage() {
           dark={dark}
           reactions={commentData.reactions}
           onToggleReaction={commentData.toggleReaction}
+          inputOnly={showInputOnly}
         />
       );
     },
-    [commentData, dark, members, activeCommentColumn]
+    [commentData, dark, members, activeCommentColumn, clickedOnDot]
   );
 
   if (!problem || !member) {
@@ -705,6 +716,7 @@ export default function ProblemPage() {
                   activeCommentColumn={activeCommentColumn}
                   renderInlineCard={renderInlineCard}
                   renderHoverPreview={commentData.comments.length > 0 ? renderHoverPreview : undefined}
+                  previewDot={activeCommentLine != null && !clickedOnDot ? { line: activeCommentLine, column: activeCommentColumn } : null}
                 />
               ) : activeTab === 'note' && note ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
