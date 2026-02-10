@@ -277,10 +277,16 @@ export default function ProblemPage() {
     navigator.clipboard.writeText(lines.join('\n'));
   }, [code, commentData.comments]);
 
-  // 호버 프리뷰 — 마커에 마우스 올리면 댓글만 표시 (답글 UI 없음)
+  // 호버 프리뷰 — 마커에 마우스 올리면 해당 마커의 댓글만 표시 (답글 UI 없음)
   const renderHoverPreview = useCallback(
-    (lineNumber: number): React.ReactNode | null => {
-      const lineComments = commentData.commentsByLine.get(lineNumber) || [];
+    (lineNumber: number, hoveredCol?: number): React.ReactNode | null => {
+      const allLineComments = commentData.commentsByLine.get(lineNumber) || [];
+      if (allLineComments.length === 0) return null;
+
+      // 호버한 마커의 칼럼 근처 댓글만 필터
+      const lineComments = hoveredCol != null
+        ? allLineComments.filter((c) => Math.abs((c.column_number ?? 0) - hoveredCol) <= 2)
+        : allLineComments;
       if (lineComments.length === 0) return null;
 
       const firstCommentColor = commentData.authorColorMap.get(lineComments[0].github_username);
@@ -374,22 +380,29 @@ export default function ProblemPage() {
     [commentData.commentsByLine, commentData.authorColorMap, commentData.comments, commentData.reactions, members]
   );
 
-  // 인라인 카드 렌더 — 점 근처 클릭이면 답글, 아니면 새 댓글
+  // 인라인 카드 렌더 — 점 근처 클릭이면 해당 마커의 댓글만, 아니면 새 댓글
   const renderInlineCard = useCallback(
     (lineNumber: number) => {
-      const lineComments = commentData.commentsByLine.get(lineNumber) || [];
-      // 클릭한 칼럼이 기존 댓글 점 근처(±2글자)인지 판단
-      const nearbyComment = lineComments.find((c) => {
-        const commentCol = c.column_number ?? 0;
-        return Math.abs(commentCol - activeCommentColumn) <= 2;
-      });
+      const allLineComments = commentData.commentsByLine.get(lineNumber) || [];
+
+      // 마커 클릭: 클릭한 칼럼 근처(±2글자) 댓글만 필터
+      // 빈 줄 클릭: 전체 (inputOnly이므로 댓글 영역은 안 보임)
+      const filteredComments = clickedOnDot
+        ? allLineComments.filter((c) => {
+            const commentCol = c.column_number ?? 0;
+            return Math.abs(commentCol - activeCommentColumn) <= 2;
+          })
+        : allLineComments;
+
+      const nearbyComment = filteredComments.length > 0 ? filteredComments[0] : null;
+
       // inputOnly: 빈 줄 클릭(마커 아님) + 기존 댓글이 있을 때만 입력창만 표시
-      const showInputOnly = !clickedOnDot && lineComments.length > 0;
+      const showInputOnly = !clickedOnDot && allLineComments.length > 0;
       return (
         <InlineCommentCard
           key={`${lineNumber}-${activeCommentColumn}`}
           lineNumber={lineNumber}
-          comments={lineComments}
+          comments={filteredComments}
           allComments={commentData.comments}
           user={commentData.user}
           members={members}

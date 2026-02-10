@@ -21,7 +21,7 @@ interface CodeViewerProps {
   activeCommentLine?: number | null;
   activeCommentColumn?: number;
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
-  renderHoverPreview?: (lineNumber: number) => React.ReactNode | null;
+  renderHoverPreview?: (lineNumber: number, hoveredColumn?: number) => React.ReactNode | null;
   previewDot?: { line: number; column: number } | null;
 }
 
@@ -54,6 +54,7 @@ export default function CodeViewer({
   const [codeCopied, setCodeCopied] = useState(false);
   const [commentsCopied, setCommentsCopied] = useState(false);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const [hoveredColumn, setHoveredColumn] = useState<number | undefined>(undefined);
   const [hoverPosition, setHoverPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -294,6 +295,7 @@ export default function CodeViewer({
 
                     // Check if mouse is near any dot
                     let foundDotX: number | null = null;
+                    let foundDotColumn: number | undefined = undefined;
                     for (const dot of lineDots) {
                       const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
                       const dotY = DOT_PADDING / 2;
@@ -301,6 +303,7 @@ export default function CodeViewer({
                       const dy = mouseY - dotY;
                       if (Math.sqrt(dx * dx + dy * dy) < DOT_HIT_RADIUS) {
                         foundDotX = dotX;
+                        foundDotColumn = dot.column;
                         break;
                       }
                     }
@@ -320,6 +323,7 @@ export default function CodeViewer({
                       const cardLeft = Math.max(16, Math.min(foundDotX - 20, containerWidth - maxW - 16));
                       const arrowLeft = Math.max(10, Math.min(foundDotX - cardLeft, maxW - 10));
                       setHoveredLine(lineNumber);
+                      setHoveredColumn(foundDotColumn);
                       setHoverPosition({ top, left: cardLeft, arrowLeft });
                     } else {
                       // Mouse is not near any dot — clear hover
@@ -328,6 +332,7 @@ export default function CodeViewer({
                         hoverTimerRef.current = null;
                       }
                       setHoveredLine(null);
+                      setHoveredColumn(undefined);
                       setHoverPosition(null);
                     }
                   }
@@ -404,7 +409,7 @@ export default function CodeViewer({
                 }}
               />
               <div className="relative" style={{ zIndex: 2 }}>
-                {renderHoverPreview(hoveredLine)}
+                {renderHoverPreview(hoveredLine, hoveredColumn)}
               </div>
             </div>
           )}
