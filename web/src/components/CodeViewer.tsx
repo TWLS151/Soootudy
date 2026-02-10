@@ -378,7 +378,8 @@ export default function CodeViewer({
           wrapLines
           lineProps={(lineNumber: number) => {
             const lineDots = showDots ? (dotsByLine.get(lineNumber) || []) : [];
-            const hasPreviewDot = previewDot && previewDot.line === lineNumber;
+            // Preview dot은 새 댓글 작성 시에만 표시 (activeCommentLine과 일치할 때)
+            const hasPreviewDot = previewDot && previewDot.line === lineNumber && activeCommentLine === lineNumber;
             const hasDots = lineDots.length > 0 || hasPreviewDot;
 
             // Render dots as CSS radial-gradient at character column positions
