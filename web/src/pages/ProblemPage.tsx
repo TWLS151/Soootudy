@@ -7,7 +7,7 @@ import InlineCommentCard from '../components/InlineCommentCard';
 import CodeCommentPanel from '../components/CodeCommentPanel';
 import ReactionBar from '../components/ReactionBar';
 import { useCodeComments } from '../hooks/useCodeComments';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, MessageSquare, Circle, Copy } from 'lucide-react';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, Circle, Copy } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
@@ -510,18 +510,6 @@ export default function ProblemPage() {
                 <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
                 <span>마커</span>
               </button>
-              <button
-                onClick={() => setShowPanel(!showPanel)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors ${
-                  showPanel
-                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-                    : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-                title={showPanel ? '댓글 목록 닫기' : '댓글 목록 열기'}
-              >
-                <MessageSquare className="w-3 h-3" />
-                <span>댓글 목록</span>
-              </button>
             </div>
 
             {isOwner && (
@@ -576,17 +564,6 @@ export default function ProblemPage() {
           >
             <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
             마커
-          </button>
-          <button
-            onClick={() => setShowPanel(!showPanel)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              showPanel
-                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            }`}
-          >
-            <MessageSquare className="w-3 h-3" />
-            댓글 목록
           </button>
         </div>
 

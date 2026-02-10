@@ -122,10 +122,11 @@ export default function CodeViewer({
       const lineRect = lineEl.getBoundingClientRect();
       const top = lineRect.bottom - containerRect.top + 8;
 
-      // Find nearest dot to the clicked column
+      // Position card: if previewDot exists (new comment on empty area), use clicked column;
+      // otherwise snap to nearest existing dot
       const lineDots = dotsByLine.get(activeCommentLine) || [];
       let dotX = lineNumWidth + (activeCommentColumn ?? 0) * charWidth;
-      if (lineDots.length > 0) {
+      if (!previewDot && lineDots.length > 0) {
         let minDist = Infinity;
         for (const dot of lineDots) {
           const dist = Math.abs(dot.column - (activeCommentColumn ?? 0));
@@ -144,7 +145,7 @@ export default function CodeViewer({
       setCardPosition({ top, left: cardLeft, arrowLeft });
     }, 20);
     return () => clearTimeout(timer);
-  }, [activeCommentLine, activeCommentColumn, commentDots, dotsByLine, lineNumWidth, charWidth]);
+  }, [activeCommentLine, activeCommentColumn, commentDots, dotsByLine, lineNumWidth, charWidth, previewDot]);
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>

@@ -114,7 +114,7 @@ export default function InlineCommentCard({
   }
 
   const firstCommentColor =
-    comments.length > 0 ? authorColorMap.get(comments[0].github_username) : null;
+    !inputOnly && comments.length > 0 ? authorColorMap.get(comments[0].github_username) : null;
 
   return (
     <div
