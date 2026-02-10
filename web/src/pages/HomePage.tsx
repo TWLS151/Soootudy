@@ -288,7 +288,7 @@ export default function HomePage() {
             ) : (
               <div className="space-y-2">
                 {dailyProblems.map((problem) => {
-                  const problemUrl = getProblemUrl(problem.problem_number, problem.source);
+                  const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
                   const problemName = `${problem.source}-${problem.problem_number}`;
                   const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
                   return (
@@ -320,15 +320,13 @@ export default function HomePage() {
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
                           )}
-                          {problem.source !== 'etc' && (
-                            <Link
-                              to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
-                            >
-                              <Upload className="w-3.5 h-3.5" />
-                              제출
-                            </Link>
-                          )}
+                          <Link
+                            to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            제출
+                          </Link>
                         </div>
                       </div>
 
@@ -372,7 +370,7 @@ export default function HomePage() {
               <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">이전</h3>
               <div className="space-y-2">
                 {pastProblems.map((problem) => {
-                  const problemUrl = getProblemUrl(problem.problem_number, problem.source);
+                  const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
                   const problemName = `${problem.source}-${problem.problem_number}`;
                   const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
                   const dateLabel = new Date(problem.date + 'T00:00:00').toLocaleDateString('ko-KR', {
@@ -407,15 +405,13 @@ export default function HomePage() {
                               문제 보기
                             </a>
                           )}
-                          {problem.source !== 'etc' && (
-                            <Link
-                              to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
-                            >
-                              <Upload className="w-3.5 h-3.5" />
-                              제출
-                            </Link>
-                          )}
+                          <Link
+                            to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            제출
+                          </Link>
                         </div>
                       </div>
 

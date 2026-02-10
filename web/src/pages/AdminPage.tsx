@@ -59,6 +59,7 @@ export default function AdminPage() {
   const [formSource, setFormSource] = useState<Source>('swea');
   const [formNumber, setFormNumber] = useState('');
   const [formTitle, setFormTitle] = useState('');
+  const [formUrl, setFormUrl] = useState('');
 
   // Calendar navigation
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -93,17 +94,23 @@ export default function AdminPage() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('daily_problem').insert({
+      const insertData: Record<string, unknown> = {
         date: formDate,
         source: formSource,
         problem_number: formNumber.trim(),
         problem_title: formTitle.trim(),
         created_by: user.id,
-      });
+      };
+      if (formUrl.trim()) {
+        insertData.problem_url = formUrl.trim();
+      }
+
+      const { error } = await supabase.from('daily_problem').insert(insertData);
 
       if (error) throw error;
       setFormNumber('');
       setFormTitle('');
+      setFormUrl('');
       setShowForm(false);
       await loadAllProblems();
     } catch (error) {
@@ -438,6 +445,23 @@ export default function AdminPage() {
                 placeholder="예) 그래프 탐색, 이분 탐색 연습"
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
               />
+            </div>
+
+            {/* 문제 URL (선택) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                문제 URL <span className="text-slate-400 font-normal">(선택)</span>
+              </label>
+              <input
+                type="url"
+                value={formUrl}
+                onChange={(e) => setFormUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                SWEA/BOJ는 자동 생성됩니다. 기타 문제는 여기에 직접 입력하세요.
+              </p>
             </div>
 
             <div className="flex gap-2">

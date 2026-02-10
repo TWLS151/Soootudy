@@ -129,7 +129,7 @@ export default function DailyHistoryPage() {
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {group.problems.map((problem) => {
-                    const problemUrl = getProblemUrl(problem.problem_number, problem.source);
+                    const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
                     const problemName = `${problem.source}-${problem.problem_number}`;
                     const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
 
@@ -193,15 +193,13 @@ export default function DailyHistoryPage() {
                               <span className="hidden sm:inline">문제</span>
                             </a>
                           )}
-                          {problem.source !== 'etc' && (
-                            <Link
-                              to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
-                            >
-                              <Upload className="w-4 h-4" />
-                              <span className="hidden sm:inline">제출</span>
-                            </Link>
-                          )}
+                          <Link
+                            to={`/submit?source=${problem.source}&number=${problem.problem_number}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span className="hidden sm:inline">제출</span>
+                          </Link>
                         </div>
                       </div>
                     );

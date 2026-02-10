@@ -81,6 +81,7 @@ export interface DailyProblem {
   source: 'swea' | 'boj' | 'etc';
   problem_number: string;
   problem_title: string;
+  problem_url: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
