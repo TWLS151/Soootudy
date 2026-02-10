@@ -139,10 +139,9 @@ export default function CodeViewer({
     const arrowLeft = Math.max(10, Math.min(dotVisualX - cardLeft, maxW - 10));
 
     setHoveredLine(previewDot.line);
-    // 키보드 네비게이션 시(activeCommentLine과 다를 때)는 hoveredColumn을 undefined로 설정하여 모든 댓글 표시
-    setHoveredColumn(activeCommentLine === previewDot.line ? previewDot.column : undefined);
+    setHoveredColumn(previewDot.column);
     setHoverPosition({ top: hoverTop, left: cardLeft, arrowLeft });
-  }, [previewDot, renderHoverPreview, lineNumWidth, charWidth, activeCommentLine]);
+  }, [previewDot, renderHoverPreview, lineNumWidth, charWidth]);
 
   // Measure container width for overflow dot detection
   useEffect(() => {

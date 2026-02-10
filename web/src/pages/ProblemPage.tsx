@@ -62,6 +62,7 @@ export default function ProblemPage() {
   const [keyboardMode, setKeyboardMode] = useState<'none' | 'comment-nav' | 'member-nav'>('member-nav');
   const [currentCommentIndex, setCurrentCommentIndex] = useState(0);
   const [previewCommentLine, setPreviewCommentLine] = useState<number | null>(null);
+  const [previewCommentColumn, setPreviewCommentColumn] = useState<number>(0);
 
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
@@ -539,6 +540,7 @@ export default function ProblemPage() {
           const comment = sortedComments[nextIndex];
           if (comment?.line_number != null) {
             setPreviewCommentLine(comment.line_number);
+            setPreviewCommentColumn(comment.column_number ?? 0);
             // 스크롤
             setTimeout(() => {
               const el = document.querySelector(`[data-line-number="${comment.line_number}"]`);
@@ -552,6 +554,7 @@ export default function ProblemPage() {
           const comment = sortedComments[prevIndex];
           if (comment?.line_number != null) {
             setPreviewCommentLine(comment.line_number);
+            setPreviewCommentColumn(comment.column_number ?? 0);
             // 스크롤
             setTimeout(() => {
               const el = document.querySelector(`[data-line-number="${comment.line_number}"]`);
@@ -858,7 +861,7 @@ export default function ProblemPage() {
                   activeCommentColumn={activeCommentColumn}
                   renderInlineCard={renderInlineCard}
                   renderHoverPreview={commentData.comments.length > 0 ? renderHoverPreview : undefined}
-                  previewDot={activeCommentLine != null && !clickedOnDot ? { line: activeCommentLine, column: activeCommentColumn } : previewCommentLine != null ? { line: previewCommentLine, column: 0 } : null}
+                  previewDot={activeCommentLine != null && !clickedOnDot ? { line: activeCommentLine, column: activeCommentColumn } : previewCommentLine != null ? { line: previewCommentLine, column: previewCommentColumn } : null}
                   keyboardMode={keyboardMode}
                   onHeaderClick={() => {
                     if (sortedComments.length > 0) {
@@ -867,6 +870,7 @@ export default function ProblemPage() {
                       const firstComment = sortedComments[0];
                       if (firstComment.line_number != null) {
                         setPreviewCommentLine(firstComment.line_number);
+                        setPreviewCommentColumn(firstComment.column_number ?? 0);
                         setTimeout(() => {
                           const el = document.querySelector(`[data-line-number="${firstComment.line_number}"]`);
                           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
