@@ -277,21 +277,21 @@ export default function CodeViewer({
                     }
 
                     if (foundDotX !== null) {
-                      // Mouse is near a dot — start hover timer
-                      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                      const capturedDotX = foundDotX;
-                      hoverTimerRef.current = setTimeout(() => {
-                        if (!containerRef.current) return;
-                        const cRect = containerRef.current.getBoundingClientRect();
-                        const lRect = lineEl.getBoundingClientRect();
-                        const top = lRect.bottom - cRect.top + 8;
-                        const containerWidth = cRect.width;
-                        const maxW = 340;
-                        const cardLeft = Math.max(16, Math.min(capturedDotX - 20, containerWidth - maxW - 16));
-                        const arrowLeft = Math.max(10, Math.min(capturedDotX - cardLeft, maxW - 10));
-                        setHoveredLine(lineNumber);
-                        setHoverPosition({ top, left: cardLeft, arrowLeft });
-                      }, 300);
+                      // Mouse is near a dot — show preview immediately
+                      if (hoverTimerRef.current) {
+                        clearTimeout(hoverTimerRef.current);
+                        hoverTimerRef.current = null;
+                      }
+                      if (!containerRef.current) return;
+                      const cRect = containerRef.current.getBoundingClientRect();
+                      const lRect = lineEl.getBoundingClientRect();
+                      const top = lRect.bottom - cRect.top + 8;
+                      const containerWidth = cRect.width;
+                      const maxW = 340;
+                      const cardLeft = Math.max(16, Math.min(foundDotX - 20, containerWidth - maxW - 16));
+                      const arrowLeft = Math.max(10, Math.min(foundDotX - cardLeft, maxW - 10));
+                      setHoveredLine(lineNumber);
+                      setHoverPosition({ top, left: cardLeft, arrowLeft });
                     } else {
                       // Mouse is not near any dot — clear hover
                       if (hoverTimerRef.current) {
