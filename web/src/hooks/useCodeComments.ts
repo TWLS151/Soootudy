@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { createCommentNotification } from '../services/notifications';
-import type { Comment, Members } from '../types';
+import type { Comment, Members, Reaction } from '../types';
 
 const AUTHOR_COLORS = [
   { dot: '#3b82f6', bgClass: 'bg-blue-50 dark:bg-blue-950/30', borderClass: 'border-blue-200 dark:border-blue-800' },
@@ -29,6 +29,7 @@ export interface CodeCommentUser {
 
 export function useCodeComments(problemId: string, members?: Members) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<CodeCommentUser | null>(null);
 
@@ -61,6 +62,28 @@ export function useCodeComments(problemId: string, members?: Members) {
     }
   }, [problemId]);
 
+  const loadReactions = useCallback(async () => {
+    try {
+      // Load reactions for all comments in this problem
+      // We need comment IDs, but they're loaded async. Instead, join via comment_id.
+      // Since we can't filter by problem_id directly, load after comments are available.
+      if (comments.length === 0) {
+        setReactions([]);
+        return;
+      }
+      const commentIds = comments.map((c) => c.id);
+      const { data, error } = await supabase
+        .from('comment_reactions')
+        .select('*')
+        .in('comment_id', commentIds);
+
+      if (error) throw error;
+      setReactions(data || []);
+    } catch (error) {
+      console.error('Failed to load reactions:', error);
+    }
+  }, [comments]);
+
   useEffect(() => {
     loadComments();
 
@@ -82,6 +105,31 @@ export function useCodeComments(problemId: string, members?: Members) {
       subscription.unsubscribe();
     };
   }, [problemId, loadComments]);
+
+  // Load reactions when comments change
+  useEffect(() => {
+    loadReactions();
+  }, [loadReactions]);
+
+  // Realtime subscription for reactions
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`code-reactions:${problemId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comment_reactions',
+        },
+        () => loadReactions()
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [problemId, loadReactions]);
 
   // Author color: first commenter on the problem gets color 0, second gets color 1, etc.
   const authorColorMap = useMemo(() => {
@@ -215,8 +263,42 @@ export function useCodeComments(problemId: string, members?: Members) {
     [loadComments]
   );
 
+  const toggleReaction = useCallback(
+    async (commentId: string, emoji: string) => {
+      if (!user) return;
+
+      const existing = reactions.find(
+        (r) => r.comment_id === commentId && r.user_id === user.id && r.emoji === emoji
+      );
+
+      if (existing) {
+        // Remove reaction
+        const { error } = await supabase
+          .from('comment_reactions')
+          .delete()
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        // Add reaction
+        const { error } = await supabase
+          .from('comment_reactions')
+          .insert({
+            comment_id: commentId,
+            user_id: user.id,
+            github_username: user.github_username,
+            emoji,
+          });
+        if (error) throw error;
+      }
+
+      await loadReactions();
+    },
+    [user, reactions, loadReactions]
+  );
+
   return {
     comments,
+    reactions,
     loading,
     user,
     authorColorMap,
@@ -226,5 +308,6 @@ export function useCodeComments(problemId: string, members?: Members) {
     addComment,
     updateComment,
     deleteComment,
+    toggleReaction,
   };
 }

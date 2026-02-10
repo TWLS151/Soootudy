@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, X } from 'lucide-react';
-import type { Comment, Members } from '../types';
+import ReactionBar from './ReactionBar';
+import type { Comment, Members, Reaction } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
 
 interface InlineCommentCardProps {
@@ -14,6 +15,8 @@ interface InlineCommentCardProps {
   onSubmit: (content: string, parentId?: string) => Promise<void>;
   onClose: () => void;
   dark: boolean;
+  reactions?: Reaction[];
+  onToggleReaction?: (commentId: string, emoji: string) => void;
 }
 
 function formatDate(dateString: string) {
@@ -51,6 +54,8 @@ export default function InlineCommentCard({
   onSubmit,
   onClose,
   dark,
+  reactions = [],
+  onToggleReaction,
 }: InlineCommentCardProps) {
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -164,7 +169,7 @@ export default function InlineCommentCard({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <span
-                        className="text-[11px] font-semibold"
+                        className="text-xs font-semibold"
                         style={{ color: color?.dot }}
                       >
                         {resolveDisplayName(comment.github_username, members)}
@@ -173,9 +178,17 @@ export default function InlineCommentCard({
                         {formatDate(comment.created_at)}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                       {comment.content}
                     </p>
+                    {onToggleReaction && (
+                      <ReactionBar
+                        commentId={comment.id}
+                        reactions={reactions}
+                        currentUserId={user?.id ?? null}
+                        onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
+                      />
+                    )}
                   </div>
                 </div>
                 {/* Replies */}
@@ -206,6 +219,14 @@ export default function InlineCommentCard({
                             <p className="text-[10px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                               {reply.content}
                             </p>
+                            {onToggleReaction && (
+                              <ReactionBar
+                                commentId={reply.id}
+                                reactions={reactions}
+                                currentUserId={user?.id ?? null}
+                                onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                              />
+                            )}
                           </div>
                         </div>
                       );
@@ -226,19 +247,6 @@ export default function InlineCommentCard({
             borderColor: dark ? 'rgba(51,65,85,0.5)' : 'rgba(203,213,225,0.5)',
           }}
         >
-          {replyTo && (
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-[10px] text-indigo-600 dark:text-indigo-400">
-                답글 작성 중
-              </span>
-              <button
-                onClick={() => setReplyTo(null)}
-                className="text-[10px] text-slate-400 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            </div>
-          )}
           <div className="flex gap-1.5 items-end">
             <img src={user.avatar_url} alt="" className="w-4 h-4 rounded-full flex-shrink-0" />
             <textarea

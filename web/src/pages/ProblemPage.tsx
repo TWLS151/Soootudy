@@ -5,6 +5,7 @@ import MarkdownViewer from '../components/MarkdownViewer';
 import SourceBadge from '../components/SourceBadge';
 import InlineCommentCard from '../components/InlineCommentCard';
 import CodeCommentPanel from '../components/CodeCommentPanel';
+import ReactionBar from '../components/ReactionBar';
 import { useCodeComments } from '../hooks/useCodeComments';
 import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, MessageSquare, Circle, Copy } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -316,6 +317,14 @@ export default function ProblemPage() {
                     <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                       {comment.content}
                     </p>
+                    {commentData.reactions.filter((r) => r.comment_id === comment.id).length > 0 && (
+                      <ReactionBar
+                        commentId={comment.id}
+                        reactions={commentData.reactions}
+                        currentUserId={null}
+                        onToggle={() => {}}
+                      />
+                    )}
                   </div>
                 </div>
                 {replies.length > 0 && (
@@ -354,7 +363,7 @@ export default function ProblemPage() {
         </div>
       );
     },
-    [commentData.commentsByLine, commentData.authorColorMap, commentData.comments, members]
+    [commentData.commentsByLine, commentData.authorColorMap, commentData.comments, commentData.reactions, members]
   );
 
   // 인라인 카드 렌더 — 점 근처 클릭이면 답글, 아니면 새 댓글
@@ -381,6 +390,8 @@ export default function ProblemPage() {
           }}
           onClose={() => setActiveCommentLine(null)}
           dark={dark}
+          reactions={commentData.reactions}
+          onToggleReaction={commentData.toggleReaction}
         />
       );
     },
@@ -819,6 +830,8 @@ export default function ProblemPage() {
                     const el = document.querySelector(`[data-line-number="${lineNumber}"]`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
+                  reactions={commentData.reactions}
+                  onToggleReaction={commentData.toggleReaction}
                 />
               </div>
             )}

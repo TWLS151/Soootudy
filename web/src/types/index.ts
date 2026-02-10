@@ -94,6 +94,15 @@ export interface StudyConfig {
   updated_by: string | null;
 }
 
+export interface Reaction {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  github_username: string;
+  emoji: string;
+  created_at: string;
+}
+
 export interface Notification {
   id: string;
   user_id: string;

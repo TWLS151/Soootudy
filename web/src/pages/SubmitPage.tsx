@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Upload, Pencil, AlertCircle, FileCode, ExternalLink, X } from 'lucide-react';
+import SlotMachineNumber from '../components/SlotMachineNumber';
+import { getKSTToday } from '../lib/date';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import confetti from 'canvas-confetti';
@@ -57,7 +59,7 @@ function getCurrentWeek(): string {
 }
 
 export default function SubmitPage() {
-  const { members, dark, addProblem } = useOutletContext<Context>();
+  const { members, dark, addProblem, activities } = useOutletContext<Context>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -243,6 +245,17 @@ export default function SubmitPage() {
     }
   }
 
+  // 스트릭 계산 (성공 화면용)
+  const oldStreak = memberId ? (activities[memberId]?.streak ?? 0) : 0;
+  const newStreak = useMemo(() => {
+    if (!memberId) return 0;
+    const activity = activities[memberId];
+    if (!activity) return 1;
+    const today = getKSTToday();
+    const alreadyHasToday = activity.dates.includes(today);
+    return alreadyHasToday ? oldStreak : oldStreak + 1;
+  }, [memberId, activities, oldStreak]);
+
   // 성공 화면
   if (successData) {
     return (
@@ -258,6 +271,9 @@ export default function SubmitPage() {
             GitHub에 코드가 성공적으로 올라갔어요
           </p>
         </div>
+        {newStreak > 0 && (
+          <SlotMachineNumber from={oldStreak} to={newStreak} />
+        )}
         <Link
           to={`/problem/${successData.memberId}/${successData.week}/${successData.name}`}
           className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"

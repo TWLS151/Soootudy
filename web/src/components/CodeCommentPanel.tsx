@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import type { Comment, Members } from '../types';
+import ReactionBar from './ReactionBar';
+import type { Comment, Members, Reaction } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
 
 interface CodeCommentPanelProps {
@@ -15,6 +16,8 @@ interface CodeCommentPanelProps {
   onDeleteComment: (id: string) => Promise<void>;
   onAddReply: (content: string, lineNumber: number, parentId: string) => Promise<void>;
   onLineSelect?: (lineNumber: number) => void;
+  reactions?: Reaction[];
+  onToggleReaction?: (commentId: string, emoji: string) => void;
 }
 
 function formatDate(dateString: string) {
@@ -52,6 +55,8 @@ export default function CodeCommentPanel({
   onDeleteComment,
   onAddReply,
   onLineSelect,
+  reactions = [],
+  onToggleReaction,
 }: CodeCommentPanelProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -275,6 +280,14 @@ export default function CodeCommentPanel({
                         <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap break-words">
                           {comment.content}
                         </p>
+                        {onToggleReaction && (
+                          <ReactionBar
+                            commentId={comment.id}
+                            reactions={reactions}
+                            currentUserId={user?.id ?? null}
+                            onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
+                          />
+                        )}
                       </>
                     )}
 
@@ -306,6 +319,14 @@ export default function CodeCommentPanel({
                                 <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                                   {reply.content}
                                 </p>
+                                {onToggleReaction && (
+                                  <ReactionBar
+                                    commentId={reply.id}
+                                    reactions={reactions}
+                                    currentUserId={user?.id ?? null}
+                                    onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                                  />
+                                )}
                               </div>
                             </div>
                           );

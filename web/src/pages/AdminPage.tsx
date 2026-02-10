@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { supabase } from '../lib/supabase';
 import { getKSTToday } from '../lib/date';
 import { useStudyConfig } from '../hooks/useStudyConfig';
+import { useAllMembersProgress } from '../hooks/useAllMembersProgress';
 import type { Members, Problem, DailyProblem } from '../types';
 import type { User } from '@supabase/supabase-js';
 
@@ -18,7 +19,7 @@ interface Context {
 type Source = 'swea' | 'boj' | 'etc';
 
 export default function AdminPage() {
-  const { members, user } = useOutletContext<Context>();
+  const { members, problems, user } = useOutletContext<Context>();
   const navigate = useNavigate();
 
   // Admin check
@@ -42,6 +43,9 @@ export default function AdminPage() {
   const { config, updateConfig } = useStudyConfig();
   const [commentCount, setCommentCount] = useState(3);
   const [configSaving, setConfigSaving] = useState(false);
+
+  // 전체 팀원 댓글 현황
+  const { progressMap, loading: progressLoading } = useAllMembersProgress(members);
 
   useEffect(() => {
     if (config) setCommentCount(config.required_comments);
@@ -279,6 +283,125 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* 오늘의 현황 */}
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">오늘의 현황</h2>
+          {!progressLoading && (() => {
+            const requiredComments = config?.required_comments ?? 3;
+            const incomplete = Object.entries(members).filter(([id]) => {
+              const memberComments = progressMap.get(id) ?? 0;
+              const commentsOk = memberComments >= requiredComments;
+              const allSubmitted = todayProblems.length === 0 || todayProblems.every((dp) => {
+                const problemName = `${dp.source}-${dp.problem_number}`;
+                return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
+              });
+              return !commentsOk || !allSubmitted;
+            });
+            return incomplete.length > 0 ? (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
+                미완료 {incomplete.length}명
+              </span>
+            ) : (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400">
+                모두 완료
+              </span>
+            );
+          })()}
+        </div>
+
+        {progressLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="w-12 h-12">
+              <DotLottieReact src="/cat.lottie" loop autoplay />
+            </div>
+          </div>
+        ) : todayProblems.length === 0 && (config?.required_comments ?? 3) === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
+            오늘 등록된 과제가 없습니다.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-2 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">팀원</th>
+                  <th className="text-center py-2 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-center gap-1">
+                      <Code2 className="w-3.5 h-3.5" />
+                      코드 제출
+                    </div>
+                  </th>
+                  <th className="text-center py-2 px-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      댓글
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(members).map(([id, member]) => {
+                  const memberComments = progressMap.get(id) ?? 0;
+                  const requiredComments = config?.required_comments ?? 3;
+                  const commentsOk = memberComments >= requiredComments;
+
+                  const submittedCount = todayProblems.filter((dp) => {
+                    const problemName = `${dp.source}-${dp.problem_number}`;
+                    return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
+                  }).length;
+                  const allSubmitted = todayProblems.length > 0 && submittedCount === todayProblems.length;
+                  const allComplete = (todayProblems.length === 0 || allSubmitted) && commentsOk;
+
+                  return (
+                    <tr
+                      key={id}
+                      className={`border-b last:border-b-0 border-slate-100 dark:border-slate-800 ${
+                        allComplete ? 'bg-green-50/50 dark:bg-green-950/10' : ''
+                      }`}
+                    >
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={`https://github.com/${member.github}.png?size=24`}
+                            alt={member.name}
+                            className="w-5 h-5 rounded-full"
+                          />
+                          <span className="font-medium text-slate-700 dark:text-slate-300 text-xs">
+                            {member.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {todayProblems.length === 0 ? (
+                          <span className="text-xs text-slate-400">-</span>
+                        ) : allSubmitted ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
+                        ) : (
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {submittedCount}/{todayProblems.length}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        {commentsOk ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
+                        ) : (
+                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                            {memberComments}/{requiredComments}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* 캘린더 뷰 */}
