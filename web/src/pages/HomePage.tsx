@@ -216,16 +216,46 @@ export default function HomePage() {
   async function loadPastProblems() {
     try {
       const today = getKSTToday();
-      const { data, error } = await supabase
+
+      // 어제 날짜 계산
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // 어제 문제 조회
+      const { data: yesterdayData, error: yesterdayError } = await supabase
+        .from('daily_problem')
+        .select('*')
+        .eq('date', yesterdayStr)
+        .order('created_at', { ascending: true });
+
+      if (yesterdayError) throw yesterdayError;
+
+      // 어제 문제가 있으면 그것 사용
+      if (yesterdayData && yesterdayData.length > 0) {
+        setPastProblems(yesterdayData);
+        return;
+      }
+
+      // 어제 문제가 없으면 가장 최근 날짜의 문제 조회
+      const { data: allPast, error: allError } = await supabase
         .from('daily_problem')
         .select('*')
         .lt('date', today)
         .order('date', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(5);
+        .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setPastProblems(data || []);
+      if (allError) throw allError;
+
+      if (allPast && allPast.length > 0) {
+        // 가장 최근 날짜 찾기
+        const mostRecentDate = allPast[0].date;
+        // 그 날짜의 문제만 필터링
+        const recentDayProblems = allPast.filter(p => p.date === mostRecentDate);
+        setPastProblems(recentDayProblems);
+      } else {
+        setPastProblems([]);
+      }
     } catch (error) {
       console.error('Failed to load past problems:', error);
     }
@@ -289,7 +319,7 @@ export default function HomePage() {
               {myStreak > 0 && (
                 <span className="flex items-center gap-1 text-slate-600 dark:text-slate-300">
                   <Flame className="w-3.5 h-3.5 text-orange-500" />
-                  <strong className="text-orange-500 dark:text-orange-400">{myStreak}일</strong> 스트릭
+                  <strong className="text-orange-500 dark:text-orange-400">{myStreak}일</strong> 연속
                 </span>
               )}
             </>
