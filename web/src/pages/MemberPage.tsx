@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { Flame, MessageSquare, Calendar, Lock, Check } from 'lucide-react';
+import { Flame, MessageSquare, Calendar, Lock, Check, Settings } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
@@ -169,9 +169,10 @@ export default function MemberPage() {
             {isOwner && (
               <button
                 onClick={() => setShowCharacterPicker((v) => !v)}
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors whitespace-nowrap font-medium"
+                className="absolute top-2 right-2 p-2 rounded-full bg-slate-100/80 dark:bg-slate-700/80 backdrop-blur-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                title="캐릭터 설정"
               >
-                변경
+                <Settings className="w-4 h-4" />
               </button>
             )}
           </div>
