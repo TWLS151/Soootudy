@@ -126,3 +126,11 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+export interface CodeBookmark {
+  id: string;
+  user_id: string;
+  problem_id: string;
+  memo: string | null;
+  created_at: string;
+}

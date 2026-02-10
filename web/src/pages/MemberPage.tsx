@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useParams, useOutletContext, Link } from 'react-router-dom';
-import { Flame, MessageSquare, Calendar, Lock, Check, Settings } from 'lucide-react';
+import { Flame, MessageSquare, Calendar, Lock, Check, Settings, Star, ChevronDown } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import FilterChips from '../components/FilterChips';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import { useCharacters } from '../hooks/useCharacters';
+import { useCodeBookmarks } from '../hooks/useCodeBookmarks';
 import { CHARACTERS, getCharacter } from '../lib/characters';
+import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import type { Members, Problem, Activities } from '../types';
 
@@ -23,9 +25,14 @@ export default function MemberPage() {
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [openWeeks, setOpenWeeks] = useState<Set<string>>(new Set());
   const [showCharacterPicker, setShowCharacterPicker] = useState(false);
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const { selectedCharacter, unlockedCharacters, loading: charLoading, selectCharacter } = useCharacters(id ?? null);
   const charDef = getCharacter(selectedCharacter);
+
+  // 북마크 데이터
+  const { bookmarks } = useCodeBookmarks(currentUserId);
 
   const githubUsername = user?.user_metadata?.user_name || user?.user_metadata?.preferred_username;
   const isOwner = useMemo(() => {
@@ -84,6 +91,20 @@ export default function MemberPage() {
       return d >= startDate;
     }).length;
   }, [id, activities]);
+
+  // 현재 로그인 유저 ID 가져오기
+  useMemo(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (u) setCurrentUserId(u.id);
+    });
+  }, []);
+
+  // 북마크된 문제들
+  const bookmarkedProblems = useMemo(() => {
+    if (!isOwner || bookmarks.length === 0) return [];
+    const bookmarkIds = new Set(bookmarks.map(b => b.problem_id));
+    return problems.filter(p => bookmarkIds.has(p.id));
+  }, [bookmarks, problems, isOwner]);
 
   return (
     <div className="space-y-6">
@@ -227,6 +248,73 @@ export default function MemberPage() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* 북마크한 코드 */}
+      {isOwner && bookmarkedProblems.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <button
+            onClick={() => setShowBookmarks(!showBookmarks)}
+            className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+              <span className="font-medium text-slate-900 dark:text-slate-100">북마크한 코드</span>
+              <span className="text-xs text-slate-400">({bookmarkedProblems.length})</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showBookmarks ? 'rotate-180' : ''}`} />
+          </button>
+          {showBookmarks && (
+            <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
+              {bookmarkedProblems.map((p) => {
+                const bookmarkInfo = bookmarks.find(b => b.problem_id === p.id);
+                const bookmarkDate = bookmarkInfo ? new Date(bookmarkInfo.created_at) : null;
+                const daysAgo = bookmarkDate
+                  ? Math.floor((Date.now() - bookmarkDate.getTime()) / (1000 * 60 * 60 * 24))
+                  : null;
+
+                return (
+                  <Link
+                    key={p.id}
+                    to={`/problem/${p.member}/${p.week}/${p.name}`}
+                    className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                          p.source === 'swea' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                          p.source === 'boj' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                          'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                        }`}>
+                          {p.source.toUpperCase()}
+                        </span>
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {p.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span>{members[p.member]?.name}</span>
+                        <span>·</span>
+                        <span>{p.week}</span>
+                        {daysAgo !== null && (
+                          <>
+                            <span>·</span>
+                            <span>{daysAgo === 0 ? '오늘' : `${daysAgo}일 전`} 북마크</span>
+                          </>
+                        )}
+                      </div>
+                      {bookmarkInfo?.memo && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                          💭 {bookmarkInfo.memo}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
