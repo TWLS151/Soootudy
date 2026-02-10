@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, Edit2, Trash2, MoreVertical, X } from 'lucide-react';
+import { MessageSquare, Send, Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import type { Comment, Members } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
@@ -15,7 +15,6 @@ interface CodeCommentPanelProps {
   onDeleteComment: (id: string) => Promise<void>;
   onAddReply: (content: string, lineNumber: number, parentId: string) => Promise<void>;
   onLineSelect?: (lineNumber: number) => void;
-  onClose?: () => void;
 }
 
 function formatDate(dateString: string) {
@@ -53,7 +52,6 @@ export default function CodeCommentPanel({
   onDeleteComment,
   onAddReply,
   onLineSelect,
-  onClose,
 }: CodeCommentPanelProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -129,19 +127,11 @@ export default function CodeCommentPanel({
   return (
     <div className="flex flex-col h-full md:max-h-[calc(100vh-12rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-slate-200 dark:border-slate-700">
+      <div className="pb-2 mb-1.5 border-b border-slate-200 dark:border-slate-700">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
           <MessageSquare className="w-4 h-4" />
           댓글 {topLevelComments.length > 0 && `(${topLevelComments.length})`}
         </h2>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
-          >
-            <X className="w-3.5 h-3.5 text-slate-500" />
-          </button>
-        )}
       </div>
 
       {/* Comment list */}

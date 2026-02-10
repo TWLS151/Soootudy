@@ -274,6 +274,80 @@ export default function ProblemPage() {
     navigator.clipboard.writeText(lines.join('\n'));
   }, [code, commentData.comments]);
 
+  // 호버 프리뷰 — 마커에 마우스 올리면 댓글만 표시 (답글 UI 없음)
+  const renderHoverPreview = useCallback(
+    (lineNumber: number): React.ReactNode | null => {
+      const lineComments = commentData.commentsByLine.get(lineNumber) || [];
+      if (lineComments.length === 0) return null;
+
+      return (
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg p-2.5 space-y-2">
+          {lineComments.map((comment) => {
+            const authorColor = commentData.authorColorMap.get(comment.github_username);
+            const displayName = (() => {
+              for (const m of Object.values(members)) {
+                if (m.github.toLowerCase() === comment.github_username.toLowerCase()) return m.name;
+              }
+              return comment.github_username;
+            })();
+            const replies = commentData.comments.filter((c) => c.parent_id === comment.id);
+
+            return (
+              <div key={comment.id}>
+                <div className="flex gap-1.5">
+                  <img
+                    src={comment.github_avatar || `https://github.com/${comment.github_username}.png?size=24`}
+                    alt=""
+                    className="w-5 h-5 rounded-full shrink-0 mt-0.5"
+                  />
+                  <div className="min-w-0">
+                    <span className="font-semibold text-xs" style={{ color: authorColor?.dot }}>
+                      {displayName}
+                    </span>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
+                      {comment.content}
+                    </p>
+                  </div>
+                </div>
+                {replies.length > 0 && (
+                  <div className="mt-1 ml-6 space-y-1 pl-1.5 border-l-2 border-slate-200 dark:border-slate-600">
+                    {replies.map((reply) => {
+                      const replyColor = commentData.authorColorMap.get(reply.github_username);
+                      const replyName = (() => {
+                        for (const m of Object.values(members)) {
+                          if (m.github.toLowerCase() === reply.github_username.toLowerCase()) return m.name;
+                        }
+                        return reply.github_username;
+                      })();
+                      return (
+                        <div key={reply.id} className="flex gap-1.5">
+                          <img
+                            src={reply.github_avatar || `https://github.com/${reply.github_username}.png?size=20`}
+                            alt=""
+                            className="w-4 h-4 rounded-full shrink-0 mt-0.5"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-medium text-[10px]" style={{ color: replyColor?.dot }}>
+                              {replyName}
+                            </span>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
+                              {reply.content}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    },
+    [commentData.commentsByLine, commentData.authorColorMap, commentData.comments, members]
+  );
+
   // 인라인 카드 렌더 — 점 근처 클릭이면 답글, 아니면 새 댓글
   const renderInlineCard = useCallback(
     (lineNumber: number) => {
@@ -400,10 +474,10 @@ export default function ProblemPage() {
                     ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
-                title={showDots ? '댓글 점 숨기기' : '댓글 점 보기'}
+                title={showDots ? '댓글 마커 숨기기' : '댓글 마커 보기'}
               >
                 <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
-                <span>점</span>
+                <span>마커</span>
               </button>
               <button
                 onClick={() => setShowPanel(!showPanel)}
@@ -412,10 +486,10 @@ export default function ProblemPage() {
                     ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
                     : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
-                title={showPanel ? '댓글 패널 닫기' : '댓글 패널 열기'}
+                title={showPanel ? '댓글 목록 닫기' : '댓글 목록 열기'}
               >
                 <MessageSquare className="w-3 h-3" />
-                <span>패널</span>
+                <span>댓글 목록</span>
               </button>
             </div>
 
@@ -470,7 +544,7 @@ export default function ProblemPage() {
             }`}
           >
             <Circle className="w-3 h-3" fill={showDots ? 'currentColor' : 'none'} />
-            댓글 점
+            마커
           </button>
           <button
             onClick={() => setShowPanel(!showPanel)}
@@ -481,7 +555,7 @@ export default function ProblemPage() {
             }`}
           >
             <MessageSquare className="w-3 h-3" />
-            댓글 패널
+            댓글 목록
           </button>
         </div>
 
@@ -609,6 +683,7 @@ export default function ProblemPage() {
                   showDots={showDots}
                   activeCommentLine={activeCommentLine}
                   renderInlineCard={renderInlineCard}
+                  renderHoverPreview={commentData.comments.length > 0 ? renderHoverPreview : undefined}
                 />
               ) : activeTab === 'note' && note ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -734,7 +809,6 @@ export default function ProblemPage() {
                     const el = document.querySelector(`[data-line-number="${lineNumber}"]`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
-                  onClose={() => setShowPanel(false)}
                 />
               </div>
             )}

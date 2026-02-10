@@ -20,6 +20,7 @@ interface CodeViewerProps {
   showDots?: boolean;
   activeCommentLine?: number | null;
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
+  renderHoverPreview?: (lineNumber: number) => React.ReactNode | null;
 }
 
 const DOT_PADDING = 20;
@@ -39,6 +40,7 @@ export default function CodeViewer({
   showDots,
   activeCommentLine,
   renderInlineCard,
+  renderHoverPreview,
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardPosition, setCardPosition] = useState<{ top: number } | null>(null);
@@ -46,6 +48,9 @@ export default function CodeViewer({
   const [lineNumWidth, setLineNumWidth] = useState(48);
   const [codeCopied, setCodeCopied] = useState(false);
   const [commentsCopied, setCommentsCopied] = useState(false);
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ top: number } | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Group dots by line for lineProps lookup
   const dotsByLine = useMemo(() => {
@@ -114,6 +119,19 @@ export default function CodeViewer({
     }, 20);
     return () => clearTimeout(timer);
   }, [activeCommentLine, commentDots]);
+
+  // Calculate hover preview position
+  useEffect(() => {
+    if (hoveredLine == null || !containerRef.current || activeCommentLine === hoveredLine) {
+      setHoverPosition(null);
+      return;
+    }
+    const lineEl = containerRef.current.querySelector(`[data-line-number="${hoveredLine}"]`);
+    if (!lineEl) { setHoverPosition(null); return; }
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const lineRect = lineEl.getBoundingClientRect();
+    setHoverPosition({ top: lineRect.bottom - containerRect.top + 4 });
+  }, [hoveredLine, activeCommentLine]);
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>
@@ -227,6 +245,19 @@ export default function CodeViewer({
                     onLineClick(lineNumber, column);
                   }
                 : undefined,
+              onMouseEnter: hasDots && renderHoverPreview
+                ? () => {
+                    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                    hoverTimerRef.current = setTimeout(() => setHoveredLine(lineNumber), 300);
+                  }
+                : undefined,
+              onMouseLeave: hasDots && renderHoverPreview
+                ? () => {
+                    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                    hoverTimerRef.current = null;
+                    setHoveredLine(null);
+                  }
+                : undefined,
             };
           }}
           customStyle={{
@@ -253,6 +284,24 @@ export default function CodeViewer({
               }}
             >
               {renderInlineCard(activeCommentLine)}
+            </div>
+          )}
+
+        {/* Hover preview */}
+        {hoveredLine != null &&
+          activeCommentLine !== hoveredLine &&
+          renderHoverPreview &&
+          hoverPosition && (
+            <div
+              className="absolute z-20 pointer-events-none"
+              style={{
+                top: hoverPosition.top,
+                left: 48,
+                right: 16,
+                maxWidth: 360,
+              }}
+            >
+              {renderHoverPreview(hoveredLine)}
             </div>
           )}
       </div>
