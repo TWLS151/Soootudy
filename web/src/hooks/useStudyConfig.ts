@@ -45,7 +45,7 @@ export function useStudyConfig() {
   }, [loadConfig]);
 
   const updateConfig = useCallback(
-    async (updates: Partial<Pick<StudyConfig, 'required_comments'>>) => {
+    async (updates: Partial<Pick<StudyConfig, 'required_comments' | 'required_submissions'>>) => {
       if (!config) return;
       const { error } = await supabase
         .from('study_config')

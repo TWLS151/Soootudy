@@ -122,16 +122,18 @@ export default function HomePage() {
   const [loadingDaily, setLoadingDaily] = useState(true);
 
   const requiredComments = config?.required_comments ?? 3;
+  const requiredSubmissions = config?.required_submissions ?? 1;
 
   // 일일 과제 완료 판정
   const allComplete = useMemo(() => {
     if (!currentMemberId || loadingDaily || progressLoading || dailyProblems.length === 0) return false;
-    const allSubmitted = dailyProblems.every((dp) => {
+    const submittedCount = dailyProblems.filter((dp) => {
       const name = `${dp.source}-${dp.problem_number}`;
       return problems.some((p) => p.member === currentMemberId && (p.baseName || p.name) === name);
-    });
-    return allSubmitted && commentCount >= requiredComments;
-  }, [currentMemberId, dailyProblems, problems, commentCount, requiredComments, loadingDaily, progressLoading]);
+    }).length;
+    const submissionsOk = submittedCount >= Math.min(requiredSubmissions, dailyProblems.length);
+    return submissionsOk && commentCount >= requiredComments;
+  }, [currentMemberId, dailyProblems, problems, commentCount, requiredComments, requiredSubmissions, loadingDaily, progressLoading]);
 
   // 축하 메시지 (랜덤)
   const [celebrationMessage] = useState(
@@ -303,6 +305,7 @@ export default function HomePage() {
           currentMemberId={currentMemberId}
           commentCount={commentCount}
           requiredComments={requiredComments}
+          requiredSubmissions={requiredSubmissions}
           loading={loadingDaily || progressLoading}
         />
       )}

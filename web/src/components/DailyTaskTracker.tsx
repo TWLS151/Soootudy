@@ -7,6 +7,7 @@ interface DailyTaskTrackerProps {
   currentMemberId: string | null;
   commentCount: number;
   requiredComments: number;
+  requiredSubmissions: number;
   loading: boolean;
 }
 
@@ -16,6 +17,7 @@ export default function DailyTaskTracker({
   currentMemberId,
   commentCount,
   requiredComments,
+  requiredSubmissions,
   loading,
 }: DailyTaskTrackerProps) {
   if (loading || !currentMemberId) return null;
@@ -28,10 +30,10 @@ export default function DailyTaskTracker({
     return { ...dp, submitted };
   });
 
-  const allSubmitted = dailyProblems.length > 0 && submittedProblems.every((p) => p.submitted);
   const submittedCount = submittedProblems.filter((p) => p.submitted).length;
+  const submissionsOk = dailyProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, dailyProblems.length);
   const commentsComplete = commentCount >= requiredComments;
-  const allComplete = allSubmitted && commentsComplete;
+  const allComplete = submissionsOk && commentsComplete;
 
   return (
     <div
@@ -55,7 +57,7 @@ export default function DailyTaskTracker({
         <div className="flex items-center gap-3 flex-wrap flex-1">
           {/* 코드 제출 */}
           <div className="flex items-center gap-1.5">
-            {allSubmitted ? (
+            {submissionsOk ? (
               <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
             ) : (
               <Circle className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
@@ -63,7 +65,7 @@ export default function DailyTaskTracker({
             <Code2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
             <span
               className={`text-sm ${
-                allSubmitted
+                submissionsOk
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-slate-700 dark:text-slate-300'
               }`}
@@ -72,12 +74,12 @@ export default function DailyTaskTracker({
             </span>
             <span
               className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                allSubmitted
+                submissionsOk
                   ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
             >
-              {submittedCount}/{dailyProblems.length}
+              {submittedCount}/{Math.min(requiredSubmissions, dailyProblems.length)}
             </span>
           </div>
 

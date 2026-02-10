@@ -42,13 +42,17 @@ export default function AdminPage() {
   // Study config
   const { config, updateConfig } = useStudyConfig();
   const [commentCount, setCommentCount] = useState(3);
+  const [submissionCount, setSubmissionCount] = useState(1);
   const [configSaving, setConfigSaving] = useState(false);
 
   // 전체 팀원 댓글 현황
   const { progressMap, loading: progressLoading } = useAllMembersProgress(members);
 
   useEffect(() => {
-    if (config) setCommentCount(config.required_comments);
+    if (config) {
+      setCommentCount(config.required_comments);
+      setSubmissionCount(config.required_submissions ?? 1);
+    }
   }, [config]);
 
   // State
@@ -238,49 +242,99 @@ export default function AdminPage() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">스터디 설정</h2>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              일일 필수 댓글 수
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              각 팀원이 하루에 작성해야 하는 최소 댓글 수
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCommentCount(Math.max(1, commentCount - 1))}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
-            >
-              -
-            </button>
-            <span className="w-8 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">
-              {commentCount}
-            </span>
-            <button
-              onClick={() => setCommentCount(commentCount + 1)}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
-            >
-              +
-            </button>
-            {config && commentCount !== config.required_comments && (
+        <div className="space-y-4">
+          {/* 일일 필수 댓글 수 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                일일 필수 댓글 수
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                각 팀원이 하루에 작성해야 하는 최소 댓글 수
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
               <button
-                onClick={async () => {
-                  setConfigSaving(true);
-                  try {
-                    await updateConfig({ required_comments: commentCount });
-                  } catch {
-                    alert('설정 저장에 실패했습니다.');
-                  } finally {
-                    setConfigSaving(false);
-                  }
-                }}
-                disabled={configSaving}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={() => setCommentCount(Math.max(1, commentCount - 1))}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
               >
-                {configSaving ? '저장 중...' : '저장'}
+                -
               </button>
-            )}
+              <span className="w-8 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                {commentCount}
+              </span>
+              <button
+                onClick={() => setCommentCount(commentCount + 1)}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
+              >
+                +
+              </button>
+              {config && commentCount !== config.required_comments && (
+                <button
+                  onClick={async () => {
+                    setConfigSaving(true);
+                    try {
+                      await updateConfig({ required_comments: commentCount });
+                    } catch {
+                      alert('설정 저장에 실패했습니다.');
+                    } finally {
+                      setConfigSaving(false);
+                    }
+                  }}
+                  disabled={configSaving}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {configSaving ? '저장 중...' : '저장'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 일일 필수 제출 수 */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                일일 필수 제출 수
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                각 팀원이 하루에 제출해야 하는 최소 코드 개수
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSubmissionCount(Math.max(1, submissionCount - 1))}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
+              >
+                -
+              </button>
+              <span className="w-8 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                {submissionCount}
+              </span>
+              <button
+                onClick={() => setSubmissionCount(submissionCount + 1)}
+                className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-lg transition-colors"
+              >
+                +
+              </button>
+              {config && submissionCount !== (config.required_submissions ?? 1) && (
+                <button
+                  onClick={async () => {
+                    setConfigSaving(true);
+                    try {
+                      await updateConfig({ required_submissions: submissionCount });
+                    } catch {
+                      alert('설정 저장에 실패했습니다.');
+                    } finally {
+                      setConfigSaving(false);
+                    }
+                  }}
+                  disabled={configSaving}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {configSaving ? '저장 중...' : '저장'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -292,14 +346,16 @@ export default function AdminPage() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">오늘의 현황</h2>
           {!progressLoading && (() => {
             const requiredComments = config?.required_comments ?? 3;
+            const requiredSubmissions = config?.required_submissions ?? 1;
             const incomplete = Object.entries(members).filter(([id]) => {
               const memberComments = progressMap.get(id) ?? 0;
               const commentsOk = memberComments >= requiredComments;
-              const allSubmitted = todayProblems.length === 0 || todayProblems.every((dp) => {
+              const submittedCount = todayProblems.filter((dp) => {
                 const problemName = `${dp.source}-${dp.problem_number}`;
                 return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
-              });
-              return !commentsOk || !allSubmitted;
+              }).length;
+              const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);
+              return !commentsOk || !submissionsOk;
             });
             return incomplete.length > 0 ? (
               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
@@ -347,14 +403,15 @@ export default function AdminPage() {
                 {Object.entries(members).map(([id, member]) => {
                   const memberComments = progressMap.get(id) ?? 0;
                   const requiredComments = config?.required_comments ?? 3;
+                  const requiredSubmissions = config?.required_submissions ?? 1;
                   const commentsOk = memberComments >= requiredComments;
 
                   const submittedCount = todayProblems.filter((dp) => {
                     const problemName = `${dp.source}-${dp.problem_number}`;
                     return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
                   }).length;
-                  const allSubmitted = todayProblems.length > 0 && submittedCount === todayProblems.length;
-                  const allComplete = (todayProblems.length === 0 || allSubmitted) && commentsOk;
+                  const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);
+                  const allComplete = submissionsOk && commentsOk;
 
                   return (
                     <tr
@@ -378,11 +435,11 @@ export default function AdminPage() {
                       <td className="py-2 px-2 text-center">
                         {todayProblems.length === 0 ? (
                           <span className="text-xs text-slate-400">-</span>
-                        ) : allSubmitted ? (
+                        ) : submissionsOk ? (
                           <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
                         ) : (
                           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {submittedCount}/{todayProblems.length}
+                            {submittedCount}/{Math.min(requiredSubmissions, todayProblems.length)}
                           </span>
                         )}
                       </td>

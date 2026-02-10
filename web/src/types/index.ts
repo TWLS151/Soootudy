@@ -90,6 +90,7 @@ export interface DailyProblem {
 export interface StudyConfig {
   id: string;
   required_comments: number;
+  required_submissions: number;
   updated_at: string;
   updated_by: string | null;
 }
