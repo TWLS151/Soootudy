@@ -23,6 +23,11 @@ interface CodeViewerProps {
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
   renderHoverPreview?: (lineNumber: number, hoveredColumn?: number) => React.ReactNode | null;
   previewDot?: { line: number; column: number } | null;
+  // Keyboard navigation
+  keyboardMode?: 'none' | 'comment-nav' | 'member-nav';
+  onHeaderClick?: () => void;
+  commentCount?: number;
+  currentCommentIndex?: number;
 }
 
 const DOT_PADDING = 20;
@@ -46,6 +51,10 @@ export default function CodeViewer({
   renderInlineCard,
   renderHoverPreview,
   previewDot,
+  keyboardMode = 'member-nav',
+  onHeaderClick,
+  commentCount = 0,
+  currentCommentIndex,
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardPosition, setCardPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
@@ -251,7 +260,22 @@ export default function CodeViewer({
               {title}
             </span>
           ) : (
-            <span className="text-xs text-slate-500 dark:text-slate-400">Python</span>
+            <button
+              onClick={onHeaderClick}
+              className={`flex items-center gap-2 text-xs transition-colors ${
+                keyboardMode === 'comment-nav'
+                  ? 'text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer'
+              }`}
+              disabled={!onHeaderClick || commentCount === 0}
+            >
+              <span>Python</span>
+              {keyboardMode === 'comment-nav' && commentCount > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400">
+                  ↑↓ {currentCommentIndex !== undefined ? `${currentCommentIndex + 1}/${commentCount}` : `${commentCount}개`}
+                </span>
+              )}
+            </button>
           )}
           <div className="flex items-center gap-1">
             {onCopyCode && (

@@ -58,6 +58,11 @@ export default function ProblemPage() {
     return localStorage.getItem('copyTipDismissed') !== 'true';
   });
 
+  // 키보드 네비게이션 상태
+  const [keyboardMode, setKeyboardMode] = useState<'none' | 'comment-nav' | 'member-nav'>('member-nav');
+  const [currentCommentIndex, setCurrentCommentIndex] = useState(0);
+  const [previewCommentLine, setPreviewCommentLine] = useState<number | null>(null);
+
   const problem = problems.find(
     (p) => p.member === memberId && p.week === week && p.name === problemName
   );
@@ -490,6 +495,98 @@ export default function ProblemPage() {
   const compareMember = compareWith ? members[compareWith.member] : null;
   const isWideMode = expanded || compareWith;
 
+  // 댓글 정렬 (라인, 칼럼 순)
+  const sortedComments = useMemo(() => {
+    return commentData.comments
+      .filter((c) => !c.parent_id && c.line_number != null)
+      .sort((a, b) => {
+        if (a.line_number !== b.line_number) {
+          return (a.line_number ?? 0) - (b.line_number ?? 0);
+        }
+        return (a.column_number ?? 0) - (b.column_number ?? 0);
+      });
+  }, [commentData.comments]);
+
+  // 같은 문제를 푼 멤버 목록 (멤버 네비게이션용)
+  const sameProblemMembers = useMemo(() => {
+    if (!problem) return [];
+    const currentBaseName = problem.baseName || problem.name;
+    const memberSet = new Set<string>();
+    for (const p of problems) {
+      const pBaseName = p.baseName || p.name;
+      if (pBaseName === currentBaseName && p.week === week) {
+        memberSet.add(p.member);
+      }
+    }
+    return Array.from(memberSet).sort();
+  }, [problems, problem, week]);
+
+  const currentMemberIndex = sameProblemMembers.indexOf(memberId ?? '');
+
+  // 키보드 네비게이션
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // input/textarea 포커스 시 무시
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      // 댓글 네비게이션 모드
+      if (keyboardMode === 'comment-nav') {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const nextIndex = Math.min(currentCommentIndex + 1, sortedComments.length - 1);
+          setCurrentCommentIndex(nextIndex);
+          const comment = sortedComments[nextIndex];
+          if (comment?.line_number != null) {
+            setPreviewCommentLine(comment.line_number);
+            // 스크롤
+            setTimeout(() => {
+              const el = document.querySelector(`[data-line-number="${comment.line_number}"]`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prevIndex = Math.max(currentCommentIndex - 1, 0);
+          setCurrentCommentIndex(prevIndex);
+          const comment = sortedComments[prevIndex];
+          if (comment?.line_number != null) {
+            setPreviewCommentLine(comment.line_number);
+            // 스크롤
+            setTimeout(() => {
+              const el = document.querySelector(`[data-line-number="${comment.line_number}"]`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
+          }
+        } else if (e.key === 'Escape') {
+          setKeyboardMode('member-nav');
+          setPreviewCommentLine(null);
+        }
+      }
+      // 멤버 네비게이션 모드
+      else if (keyboardMode === 'member-nav') {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (sameProblemMembers.length > 1) {
+            const nextIndex = (currentMemberIndex + 1) % sameProblemMembers.length;
+            const nextMember = sameProblemMembers[nextIndex];
+            navigate(`/problem/${nextMember}/${week}/${problemName}`);
+          }
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (sameProblemMembers.length > 1) {
+            const prevIndex = (currentMemberIndex - 1 + sameProblemMembers.length) % sameProblemMembers.length;
+            const prevMember = sameProblemMembers[prevIndex];
+            navigate(`/problem/${prevMember}/${week}/${problemName}`);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [keyboardMode, currentCommentIndex, sortedComments, sameProblemMembers, currentMemberIndex, navigate, week, problemName]);
+
   return (
     <div className={isWideMode ? '-mx-6 px-6' : ''}>
       <div className="space-y-6">
@@ -743,7 +840,24 @@ export default function ProblemPage() {
                   activeCommentColumn={activeCommentColumn}
                   renderInlineCard={renderInlineCard}
                   renderHoverPreview={commentData.comments.length > 0 ? renderHoverPreview : undefined}
-                  previewDot={activeCommentLine != null && !clickedOnDot ? { line: activeCommentLine, column: activeCommentColumn } : null}
+                  previewDot={activeCommentLine != null && !clickedOnDot ? { line: activeCommentLine, column: activeCommentColumn } : previewCommentLine != null ? { line: previewCommentLine, column: 0 } : null}
+                  keyboardMode={keyboardMode}
+                  onHeaderClick={() => {
+                    if (sortedComments.length > 0) {
+                      setKeyboardMode('comment-nav');
+                      setCurrentCommentIndex(0);
+                      const firstComment = sortedComments[0];
+                      if (firstComment.line_number != null) {
+                        setPreviewCommentLine(firstComment.line_number);
+                        setTimeout(() => {
+                          const el = document.querySelector(`[data-line-number="${firstComment.line_number}"]`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 50);
+                      }
+                    }
+                  }}
+                  commentCount={sortedComments.length}
+                  currentCommentIndex={keyboardMode === 'comment-nav' ? currentCommentIndex : undefined}
                 />
               ) : activeTab === 'note' && note ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -864,7 +978,7 @@ export default function ProblemPage() {
                     commentData.addComment(content, lineNumber, parentId)
                   }
                   onLineSelect={(lineNumber) => {
-                    setActiveCommentLine(lineNumber);
+                    setPreviewCommentLine(lineNumber);
                     // 해당 줄로 스크롤
                     const el = document.querySelector(`[data-line-number="${lineNumber}"]`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
