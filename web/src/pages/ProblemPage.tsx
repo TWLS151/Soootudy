@@ -682,6 +682,7 @@ export default function ProblemPage() {
                   commentDots={commentData.dots}
                   showDots={showDots}
                   activeCommentLine={activeCommentLine}
+                  activeCommentColumn={activeCommentColumn}
                   renderInlineCard={renderInlineCard}
                   renderHoverPreview={commentData.comments.length > 0 ? renderHoverPreview : undefined}
                 />

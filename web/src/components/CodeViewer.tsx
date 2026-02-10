@@ -19,11 +19,13 @@ interface CodeViewerProps {
   commentDots?: CommentDot[];
   showDots?: boolean;
   activeCommentLine?: number | null;
+  activeCommentColumn?: number;
   renderInlineCard?: (lineNumber: number) => React.ReactNode;
   renderHoverPreview?: (lineNumber: number) => React.ReactNode | null;
 }
 
 const DOT_PADDING = 20;
+const DOT_HIT_RADIUS = 15;
 
 export default function CodeViewer({
   code,
@@ -39,17 +41,18 @@ export default function CodeViewer({
   commentDots,
   showDots,
   activeCommentLine,
+  activeCommentColumn,
   renderInlineCard,
   renderHoverPreview,
 }: CodeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [cardPosition, setCardPosition] = useState<{ top: number } | null>(null);
+  const [cardPosition, setCardPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
   const [charWidth, setCharWidth] = useState(8.4);
   const [lineNumWidth, setLineNumWidth] = useState(48);
   const [codeCopied, setCodeCopied] = useState(false);
   const [commentsCopied, setCommentsCopied] = useState(false);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
-  const [hoverPosition, setHoverPosition] = useState<{ top: number } | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ top: number; left: number; arrowLeft: number } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Group dots by line for lineProps lookup
@@ -115,23 +118,31 @@ export default function CodeViewer({
       }
       const containerRect = containerRef.current.getBoundingClientRect();
       const lineRect = lineEl.getBoundingClientRect();
-      setCardPosition({ top: lineRect.bottom - containerRect.top + 4 });
+      const top = lineRect.bottom - containerRect.top + 8;
+
+      // Find nearest dot to the clicked column
+      const lineDots = dotsByLine.get(activeCommentLine) || [];
+      let dotX = lineNumWidth + (activeCommentColumn ?? 0) * charWidth;
+      if (lineDots.length > 0) {
+        let minDist = Infinity;
+        for (const dot of lineDots) {
+          const dist = Math.abs(dot.column - (activeCommentColumn ?? 0));
+          if (dist < minDist) {
+            minDist = dist;
+            dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
+          }
+        }
+      }
+
+      const containerWidth = containerRect.width;
+      const maxCardWidth = 380;
+      const cardLeft = Math.max(16, Math.min(dotX - 20, containerWidth - maxCardWidth - 16));
+      const arrowLeft = Math.max(10, Math.min(dotX - cardLeft, maxCardWidth - 10));
+
+      setCardPosition({ top, left: cardLeft, arrowLeft });
     }, 20);
     return () => clearTimeout(timer);
-  }, [activeCommentLine, commentDots]);
-
-  // Calculate hover preview position
-  useEffect(() => {
-    if (hoveredLine == null || !containerRef.current || activeCommentLine === hoveredLine) {
-      setHoverPosition(null);
-      return;
-    }
-    const lineEl = containerRef.current.querySelector(`[data-line-number="${hoveredLine}"]`);
-    if (!lineEl) { setHoverPosition(null); return; }
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const lineRect = lineEl.getBoundingClientRect();
-    setHoverPosition({ top: lineRect.bottom - containerRect.top + 4 });
-  }, [hoveredLine, activeCommentLine]);
+  }, [activeCommentLine, activeCommentColumn, commentDots, dotsByLine, lineNumWidth, charWidth]);
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-700" data-code-container>
@@ -245,10 +256,51 @@ export default function CodeViewer({
                     onLineClick(lineNumber, column);
                   }
                 : undefined,
-              onMouseEnter: hasDots && renderHoverPreview
-                ? () => {
-                    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                    hoverTimerRef.current = setTimeout(() => setHoveredLine(lineNumber), 300);
+              onMouseMove: hasDots && renderHoverPreview
+                ? (e: React.MouseEvent) => {
+                    const lineEl = e.currentTarget as HTMLElement;
+                    const lineRect = lineEl.getBoundingClientRect();
+                    const mouseX = e.clientX - lineRect.left;
+                    const mouseY = e.clientY - lineRect.top;
+
+                    // Check if mouse is near any dot
+                    let foundDotX: number | null = null;
+                    for (const dot of lineDots) {
+                      const dotX = lineNumWidth + dot.column * charWidth + dot.offsetIndex * 12;
+                      const dotY = DOT_PADDING / 2;
+                      const dx = mouseX - dotX;
+                      const dy = mouseY - dotY;
+                      if (Math.sqrt(dx * dx + dy * dy) < DOT_HIT_RADIUS) {
+                        foundDotX = dotX;
+                        break;
+                      }
+                    }
+
+                    if (foundDotX !== null) {
+                      // Mouse is near a dot — start hover timer
+                      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                      const capturedDotX = foundDotX;
+                      hoverTimerRef.current = setTimeout(() => {
+                        if (!containerRef.current) return;
+                        const cRect = containerRef.current.getBoundingClientRect();
+                        const lRect = lineEl.getBoundingClientRect();
+                        const top = lRect.bottom - cRect.top + 8;
+                        const containerWidth = cRect.width;
+                        const maxW = 340;
+                        const cardLeft = Math.max(16, Math.min(capturedDotX - 20, containerWidth - maxW - 16));
+                        const arrowLeft = Math.max(10, Math.min(capturedDotX - cardLeft, maxW - 10));
+                        setHoveredLine(lineNumber);
+                        setHoverPosition({ top, left: cardLeft, arrowLeft });
+                      }, 300);
+                    } else {
+                      // Mouse is not near any dot — clear hover
+                      if (hoverTimerRef.current) {
+                        clearTimeout(hoverTimerRef.current);
+                        hoverTimerRef.current = null;
+                      }
+                      setHoveredLine(null);
+                      setHoverPosition(null);
+                    }
                   }
                 : undefined,
               onMouseLeave: hasDots && renderHoverPreview
@@ -256,6 +308,7 @@ export default function CodeViewer({
                     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
                     hoverTimerRef.current = null;
                     setHoveredLine(null);
+                    setHoverPosition(null);
                   }
                 : undefined,
             };
@@ -270,7 +323,7 @@ export default function CodeViewer({
           {code}
         </SyntaxHighlighter>
 
-        {/* Inline comment card */}
+        {/* Inline comment card — speech bubble near the dot */}
         {activeCommentLine != null &&
           renderInlineCard &&
           cardPosition && (
@@ -278,16 +331,27 @@ export default function CodeViewer({
               className="absolute z-30"
               style={{
                 top: cardPosition.top,
-                left: 48,
-                right: 16,
-                maxWidth: 400,
+                left: cardPosition.left,
+                maxWidth: 380,
               }}
             >
-              {renderInlineCard(activeCommentLine)}
+              {/* Speech bubble arrow pointing up to the dot */}
+              <div
+                className="absolute w-[10px] h-[10px] rotate-45 border-l border-t border-slate-200 dark:border-slate-700"
+                style={{
+                  top: -5,
+                  left: cardPosition.arrowLeft - 5,
+                  backgroundColor: dark ? 'rgb(30,41,59)' : 'white',
+                  zIndex: 1,
+                }}
+              />
+              <div className="relative" style={{ zIndex: 2 }}>
+                {renderInlineCard(activeCommentLine)}
+              </div>
             </div>
           )}
 
-        {/* Hover preview */}
+        {/* Hover preview — speech bubble near the dot */}
         {hoveredLine != null &&
           activeCommentLine !== hoveredLine &&
           renderHoverPreview &&
@@ -296,12 +360,23 @@ export default function CodeViewer({
               className="absolute z-20 pointer-events-none"
               style={{
                 top: hoverPosition.top,
-                left: 48,
-                right: 16,
-                maxWidth: 360,
+                left: hoverPosition.left,
+                maxWidth: 340,
               }}
             >
-              {renderHoverPreview(hoveredLine)}
+              {/* Speech bubble arrow pointing up to the dot */}
+              <div
+                className="absolute w-[10px] h-[10px] rotate-45 border-l border-t border-slate-200 dark:border-slate-700"
+                style={{
+                  top: -5,
+                  left: hoverPosition.arrowLeft - 5,
+                  backgroundColor: dark ? 'rgb(30,41,59)' : 'white',
+                  zIndex: 1,
+                }}
+              />
+              <div className="relative" style={{ zIndex: 2 }}>
+                {renderHoverPreview(hoveredLine)}
+              </div>
             </div>
           )}
       </div>
