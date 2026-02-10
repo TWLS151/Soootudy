@@ -280,8 +280,17 @@ export default function ProblemPage() {
       const lineComments = commentData.commentsByLine.get(lineNumber) || [];
       if (lineComments.length === 0) return null;
 
+      const firstCommentColor = commentData.authorColorMap.get(lineComments[0].github_username);
+
       return (
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-lg p-2.5 space-y-2">
+        <div
+          className={`rounded-lg shadow-xl border overflow-hidden p-2.5 space-y-2 ${
+            firstCommentColor
+              ? `${firstCommentColor.bgClass} ${firstCommentColor.borderClass}`
+              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+          }`}
+          style={{ backdropFilter: 'blur(8px)' }}
+        >
           {lineComments.map((comment) => {
             const authorColor = commentData.authorColorMap.get(comment.github_username);
             const displayName = (() => {
