@@ -1,8 +1,8 @@
 T = int(input())
 
 for tc in range(1, T + 1):
-    N = int(input())    # N개의 당근
-    arr = sorted(list(map(int, input().split())))
+    N = int(input())    # N개의 당근 #  3<=N<=1000
+    arr = sorted(list(map(int, input().split())))  # 1<=Ci(당근 크기)<=30
 
     # N 최대가 1000 이므로...
     result = 1001
@@ -11,15 +11,17 @@ for tc in range(1, T + 1):
     # 중, 대 나누는 기준점 j
     for i in range(1, N-1):
         for j in range(i+1, N):
-            # 자 이제 모든 경우의 수 갑니다. 그런데 그 중에
-            # 경계선에 있는 당근들 크기 같으면 리스트를 만들지 않고 다음 경우의 수로 넘어가요... (continue)
+            # 자 이제 모든 경우의 수 갑니다.
+            # 경계선에 있는 당근들 크기 같으면 리스트를 만들지 않고 다음 경우의 수로 넘어가요.
             if arr[i-1] == arr[i] or arr[j-1] == arr[j]:
                 continue
             
-            # 뭔가 이 부분을 줄일 수 있을 것 같은데 잘 모르겠습니다.
-            s_arr = arr[:i]
-            m_arr = arr[i:j]
-            l_arr = arr[j:]
+            # 이 가운데 부분을 줄일 수 있을 것 같은데 잘 모르겠습니다.
+
+            s_arr = arr[:i]  # (i개) i는 1부터 시작하므로, S 바구니에 최소 1개 들어감
+            m_arr = arr[i:j]  # (j-i개) j는 i+1부터 시작하므로, M 바구니에 최소 1개 들어감
+            l_arr = arr[j:]  # (N-j개) j의 최댓값 N-1이므로, L 바구니에 최소 1개 들어감
+                                # -> 빈 바구니 없어야 한다는 조건 만족!
 
             s_count = len(s_arr)
             m_count = len(m_arr)
@@ -47,5 +49,3 @@ for tc in range(1, T + 1):
     # s_arr = set_C_arr[:N//3]
     # m_arr = set_C_arr[N//3:j+1]
     # l_arr = set_C_arr[j:]
-
-    
