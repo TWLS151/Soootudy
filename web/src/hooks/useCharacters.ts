@@ -107,7 +107,7 @@ export function useCharacters(memberId: string | null) {
         );
         const dailyCount = memberDailySet.size;
 
-        // 스트릭
+        // 연속 제출
         const streak = activities[memberId]?.streak ?? 0;
 
         // 해금 가능한 캐릭터 계산

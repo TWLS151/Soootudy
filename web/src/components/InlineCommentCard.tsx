@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X } from 'lucide-react';
+import { Send, X, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import ReactionBar from './ReactionBar';
 import type { Comment, Members, Reaction } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
@@ -14,6 +14,8 @@ interface InlineCommentCardProps {
   initialReplyTo?: string | null;
   onSubmit: (content: string, parentId?: string) => Promise<void>;
   onClose: () => void;
+  onDeleteComment?: (id: string) => Promise<void>;
+  onUpdateComment?: (id: string, content: string) => Promise<void>;
   dark: boolean;
   reactions?: Reaction[];
   onToggleReaction?: (commentId: string, emoji: string) => void;
@@ -54,6 +56,8 @@ export default function InlineCommentCard({
   initialReplyTo,
   onSubmit,
   onClose,
+  onDeleteComment,
+  onUpdateComment,
   dark,
   reactions = [],
   onToggleReaction,
@@ -63,15 +67,30 @@ export default function InlineCommentCard({
   const [submitting, setSubmitting] = useState(false);
   // 점 근처 클릭이면 답글 모드, 아니면 새 댓글 모드
   const [replyTo, setReplyTo] = useState<string | null>(initialReplyTo ?? null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const submittingRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Auto-focus input
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
   }, [lineNumber]);
+
+  // Click outside to close menu
+  useEffect(() => {
+    function handleMenuClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleMenuClickOutside);
+    return () => document.removeEventListener('mousedown', handleMenuClickOutside);
+  }, []);
 
   // Click outside to close (ignore clicks on code lines)
   useEffect(() => {
@@ -103,6 +122,28 @@ export default function InlineCommentCard({
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteReply(replyId: string) {
+    setOpenMenuId(null);
+    if (!onDeleteComment) return;
+    if (!confirm('답글을 삭제하시겠습니까?')) return;
+    try {
+      await onDeleteComment(replyId);
+    } catch {
+      alert('답글 삭제에 실패했습니다.');
+    }
+  }
+
+  async function handleUpdateReply(replyId: string) {
+    if (!editContent.trim() || !onUpdateComment) return;
+    try {
+      await onUpdateComment(replyId, editContent.trim());
+      setEditingId(null);
+      setEditContent('');
+    } catch {
+      alert('답글 수정에 실패했습니다.');
     }
   }
 
@@ -209,27 +250,106 @@ export default function InlineCommentCard({
                             alt=""
                             className="w-3.5 h-3.5 rounded-full mt-0.5 flex-shrink-0"
                           />
-                          <div className="min-w-0">
-                            <span
-                              className="text-[10px] font-semibold"
-                              style={{ color: replyColor?.dot }}
-                            >
-                              {resolveDisplayName(reply.github_username, members)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1">
-                              {formatDate(reply.created_at)}
-                            </span>
-                            <p className="text-[10px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
-                              {reply.content}
-                            </p>
-                            {onToggleReaction && (
-                              <ReactionBar
-                                commentId={reply.id}
-                                reactions={reactions}
-                                currentUserId={user?.id ?? null}
-                                onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
-                                resolveDisplayName={(u) => resolveDisplayName(u, members)}
-                              />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className="text-[10px] font-semibold"
+                                  style={{ color: replyColor?.dot }}
+                                >
+                                  {resolveDisplayName(reply.github_username, members)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {formatDate(reply.created_at)}
+                                  {reply.created_at !== reply.updated_at && ' (수정됨)'}
+                                </span>
+                              </div>
+                              {user && user.id === reply.user_id && onDeleteComment && (
+                                <div
+                                  className="relative"
+                                  ref={openMenuId === reply.id ? menuRef : null}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(
+                                        openMenuId === reply.id ? null : reply.id
+                                      );
+                                    }}
+                                    className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
+                                  >
+                                    <MoreVertical className="w-2.5 h-2.5 text-slate-400" />
+                                  </button>
+                                  {openMenuId === reply.id && (
+                                    <div className="absolute right-0 top-5 z-10 w-24 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-0.5">
+                                      {onUpdateComment && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingId(reply.id);
+                                            setEditContent(reply.content);
+                                            setOpenMenuId(null);
+                                          }}
+                                          className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        >
+                                          <Edit2 className="w-2.5 h-2.5" /> 수정
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteReply(reply.id);
+                                        }}
+                                        className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                      >
+                                        <Trash2 className="w-2.5 h-2.5" /> 삭제
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            {editingId === reply.id ? (
+                              <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                                <textarea
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  rows={2}
+                                  className="w-full px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-[10px] focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                                />
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => handleUpdateReply(reply.id)}
+                                    className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium rounded-md"
+                                  >
+                                    저장
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setEditContent('');
+                                    }}
+                                    className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium rounded-md"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-[10px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
+                                  {reply.content}
+                                </p>
+                                {onToggleReaction && (
+                                  <ReactionBar
+                                    commentId={reply.id}
+                                    reactions={reactions}
+                                    currentUserId={user?.id ?? null}
+                                    onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                                    resolveDisplayName={(u) => resolveDisplayName(u, members)}
+                                  />
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

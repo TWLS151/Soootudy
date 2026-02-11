@@ -428,6 +428,8 @@ export default function ProblemPage() {
             await commentData.addComment(content, lineNumber, parentId, activeCommentColumnRef.current ?? undefined);
           }}
           onClose={() => setActiveCommentLine(null)}
+          onDeleteComment={commentData.deleteComment}
+          onUpdateComment={commentData.updateComment}
           dark={dark}
           reactions={commentData.reactions}
           onToggleReaction={commentData.toggleReaction}

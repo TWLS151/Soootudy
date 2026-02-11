@@ -35,7 +35,7 @@ export default function LabPage() {
       .sort((a, b) => b.value - a.value);
   }, [members, problems]);
 
-  // 스트릭 랭킹
+  // 연속 제출 랭킹
   const streakRanking = useMemo(() => {
     return sortedMemberEntries(members)
       .map(([id, member]) => ({
@@ -63,7 +63,7 @@ export default function LabPage() {
 
   const boards: { key: BoardType; label: string; icon: typeof Trophy; unit: string }[] = [
     { key: 'total', label: '총 풀이', icon: Trophy, unit: '문제' },
-    { key: 'streak', label: '스트릭', icon: Flame, unit: '일' },
+    { key: 'streak', label: '연속', icon: Flame, unit: '일' },
     { key: 'weekly', label: '이번 주', icon: Target, unit: '문제' },
   ];
 
