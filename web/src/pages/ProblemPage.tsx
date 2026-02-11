@@ -55,6 +55,7 @@ export default function ProblemPage() {
   const activeCommentColumnRef = useRef<number>(0);
   const [clickedOnDot, setClickedOnDot] = useState(false);
   const hasAutoOpenedPanel = useRef(false);
+  const hasAutoOpenedPreview = useRef(false);
   const [showCopyTip, setShowCopyTip] = useState(() => {
     return localStorage.getItem('copyTipDismissed') !== 'true';
   });
@@ -89,6 +90,20 @@ export default function ProblemPage() {
       hasAutoOpenedPanel.current = true;
     }
   }, [commentData.comments.length]);
+
+  // 페이지 진입 시 첫 마커 미리보기 자동 열기 (댓글이 있을 때)
+  useEffect(() => {
+    if (hasAutoOpenedPreview.current || commentData.loading) return;
+    const topLevel = commentData.comments
+      .filter((c) => !c.parent_id && c.line_number != null)
+      .sort((a, b) => (a.line_number ?? 0) - (b.line_number ?? 0) || (a.column_number ?? 0) - (b.column_number ?? 0));
+    if (topLevel.length > 0) {
+      const first = topLevel[0];
+      setPreviewCommentLine(first.line_number!);
+      setPreviewCommentColumn(first.column_number ?? 0);
+      hasAutoOpenedPreview.current = true;
+    }
+  }, [commentData.comments, commentData.loading]);
 
   // 현재 로그인한 유저의 memberId 찾기
   useEffect(() => {
@@ -1037,6 +1052,9 @@ export default function ProblemPage() {
                   }
                   onLineSelect={(lineNumber) => {
                     setPreviewCommentLine(lineNumber);
+                    // 해당 줄의 첫 댓글 칼럼으로 미리보기
+                    const firstOnLine = sortedComments.find(c => c.line_number === lineNumber);
+                    setPreviewCommentColumn(firstOnLine?.column_number ?? 0);
                     // 해당 줄로 스크롤
                     const el = document.querySelector(`[data-line-number="${lineNumber}"]`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -142,7 +142,7 @@ export default function CodeCommentPanel({
       </div>
 
       {/* Comment list */}
-      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1" onClick={() => setReplyToId(null)}>
         {topLevelComments.length === 0 ? (
           <div className="flex flex-col items-center py-6">
             <div className="w-16 h-16">
@@ -164,7 +164,8 @@ export default function CodeCommentPanel({
                 className={`rounded-md border px-2 py-1.5 cursor-pointer transition-colors ${
                   authorColor?.bgClass || 'bg-slate-50 dark:bg-slate-800/50'
                 } ${authorColor?.borderClass || 'border-slate-200 dark:border-slate-700'}`}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (editingId) return;
                   setReplyToId(isReplying ? null : comment.id);
                 }}

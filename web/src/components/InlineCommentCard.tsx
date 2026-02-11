@@ -219,7 +219,7 @@ export default function InlineCommentCard({
         <X className="w-3.5 h-3.5 text-slate-400" />
       </button>
 
-      <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
+      <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto" onClick={() => setReplyTo(null)}>
         {/* Existing comments */}
         {!inputOnly && comments.map((comment) => {
           const replies = getReplies(comment.id);
@@ -229,7 +229,8 @@ export default function InlineCommentCard({
             <div
                 key={comment.id}
                 className="cursor-pointer"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setReplyTo(comment.id);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
