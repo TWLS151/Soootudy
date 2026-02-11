@@ -58,7 +58,7 @@ export default function InlineCommentCard({
   onClose,
   onDeleteComment,
   onUpdateComment,
-  dark,
+  dark: _dark,
   reactions = [],
   onToggleReaction,
   inputOnly = false,
