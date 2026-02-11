@@ -383,7 +383,9 @@ export default function HomePage() {
               <div className="space-y-2">
                 {dailyProblems.map((problem) => {
                   const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
-                  const problemName = `${problem.source}-${problem.problem_number}`;
+                  // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
+                  const problemNumber = problem.source === 'etc' ? problem.problem_number.replace(/ /g, '_') : problem.problem_number;
+                  const problemName = `${problem.source}-${problemNumber}`;
                   const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
                   return (
                     <div
@@ -465,7 +467,9 @@ export default function HomePage() {
               <div className="space-y-2">
                 {pastProblems.map((problem) => {
                   const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
-                  const problemName = `${problem.source}-${problem.problem_number}`;
+                  // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
+                  const problemNumber = problem.source === 'etc' ? problem.problem_number.replace(/ /g, '_') : problem.problem_number;
+                  const problemName = `${problem.source}-${problemNumber}`;
                   const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
                   const dateLabel = new Date(problem.date + 'T00:00:00').toLocaleDateString('ko-KR', {
                     month: 'short',

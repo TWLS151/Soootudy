@@ -351,7 +351,9 @@ export default function AdminPage() {
               const memberComments = progressMap.get(id) ?? 0;
               const commentsOk = memberComments >= requiredComments;
               const submittedCount = todayProblems.filter((dp) => {
-                const problemName = `${dp.source}-${dp.problem_number}`;
+                // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
+                const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
+                const problemName = `${dp.source}-${problemNumber}`;
                 return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
               }).length;
               const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);
@@ -407,7 +409,9 @@ export default function AdminPage() {
                   const commentsOk = memberComments >= requiredComments;
 
                   const submittedCount = todayProblems.filter((dp) => {
-                    const problemName = `${dp.source}-${dp.problem_number}`;
+                    // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
+                    const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
+                    const problemName = `${dp.source}-${problemNumber}`;
                     return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
                   }).length;
                   const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);

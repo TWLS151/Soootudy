@@ -23,7 +23,9 @@ export default function DailyTaskTracker({
   if (loading || !currentMemberId) return null;
 
   const submittedProblems = dailyProblems.map((dp) => {
-    const problemName = `${dp.source}-${dp.problem_number}`;
+    // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
+    const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
+    const problemName = `${dp.source}-${problemNumber}`;
     const submitted = problems.some(
       (p) => p.member === currentMemberId && (p.baseName || p.name) === problemName
     );
