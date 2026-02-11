@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, X, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import ReactionBar from './ReactionBar';
+import MentionTextarea from './MentionTextarea';
+import { renderMentionContent } from '../lib/mention';
 import type { Comment, Members, Reaction } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
 
@@ -164,15 +166,11 @@ export default function InlineCommentCard({
       <div className={`flex gap-1.5 items-start ${isReply ? 'mt-1.5' : ''}`}>
         <img src={user.avatar_url} alt="" className="w-4 h-4 rounded-full shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          <textarea
-            ref={inputRef}
+          <MentionTextarea
+            textareaRef={inputRef}
             value={content}
-            onChange={(e) => {
-              setContent(e.target.value);
-              const el = e.target;
-              el.style.height = 'auto';
-              el.style.height = el.scrollHeight + 'px';
-            }}
+            onChange={setContent}
+            members={members}
             placeholder={isReply ? '답글...' : '댓글을 입력하세요...'}
             rows={isReply ? 1 : 2}
             className={`w-full px-0 py-0.5 bg-transparent text-slate-900 dark:text-slate-100 focus:outline-none resize-none overflow-hidden placeholder:text-slate-400 dark:placeholder:text-slate-500 ${isReply ? 'text-xs' : 'text-sm'}`}
@@ -228,14 +226,15 @@ export default function InlineCommentCard({
           const color = authorColorMap.get(comment.github_username);
           const isReplyTarget = replyTo === comment.id;
           return (
-            <div key={comment.id}>
-              <div
-                className="flex gap-2 cursor-pointer"
+            <div
+                key={comment.id}
+                className="cursor-pointer"
                 onClick={() => {
                   setReplyTo(comment.id);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
               >
+              <div className="flex gap-2">
                 <img
                   src={
                     comment.github_avatar ||
@@ -257,7 +256,7 @@ export default function InlineCommentCard({
                     </span>
                   </div>
                   <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words mt-0.5">
-                    {comment.content}
+                    {renderMentionContent(comment.content, members)}
                   </p>
                   {onToggleReaction && (
                     <ReactionBar
@@ -346,9 +345,10 @@ export default function InlineCommentCard({
                           </div>
                           {editingId === reply.id ? (
                             <div className="space-y-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
-                              <textarea
+                              <MentionTextarea
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={setEditContent}
+                                members={members}
                                 rows={2}
                                 className="w-full px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                               />
@@ -373,7 +373,7 @@ export default function InlineCommentCard({
                           ) : (
                             <>
                               <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words mt-0.5">
-                                {reply.content}
+                                {renderMentionContent(reply.content, members)}
                               </p>
                               {onToggleReaction && (
                                 <ReactionBar

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Send, Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import ReactionBar from './ReactionBar';
+import MentionTextarea from './MentionTextarea';
+import { renderMentionContent } from '../lib/mention';
 import type { Comment, Members, Reaction } from '../types';
 import type { AuthorColor, CodeCommentUser } from '../hooks/useCodeComments';
 
@@ -160,10 +162,6 @@ export default function CodeCommentPanel({
               <div
                 key={comment.id}
                 className={`rounded-md border px-2 py-1.5 cursor-pointer transition-colors ${
-                  isReplying
-                    ? 'ring-1 ring-indigo-400 dark:ring-indigo-500'
-                    : ''
-                } ${
                   authorColor?.bgClass || 'bg-slate-50 dark:bg-slate-800/50'
                 } ${authorColor?.borderClass || 'border-slate-200 dark:border-slate-700'}`}
                 onClick={() => {
@@ -238,9 +236,10 @@ export default function CodeCommentPanel({
                   <div className="flex-1 min-w-0">
                     {editingId === comment.id ? (
                       <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                        <textarea
+                        <MentionTextarea
                           value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
+                          onChange={setEditContent}
+                          members={members}
                           rows={2}
                           className="w-full px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                         />
@@ -278,7 +277,7 @@ export default function CodeCommentPanel({
                         </div>
 
                         <p className="text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap break-words">
-                          {comment.content}
+                          {renderMentionContent(comment.content, members)}
                         </p>
                         {onToggleReaction && (
                           <ReactionBar
@@ -292,8 +291,8 @@ export default function CodeCommentPanel({
                       </>
                     )}
 
-                    {/* Replies */}
-                    {replies.length > 0 && (
+                    {/* Replies + inline reply input */}
+                    {(replies.length > 0 || isReplying) && (
                       <div className="mt-1 space-y-1 pl-1.5 border-l-2 border-slate-200 dark:border-slate-600">
                         {replies.map((reply) => {
                           const replyColor = authorColorMap.get(reply.github_username);
@@ -362,9 +361,10 @@ export default function CodeCommentPanel({
                                 </div>
                                 {editingId === reply.id ? (
                                   <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <textarea
+                                    <MentionTextarea
                                       value={editContent}
-                                      onChange={(e) => setEditContent(e.target.value)}
+                                      onChange={setEditContent}
+                                      members={members}
                                       rows={2}
                                       className="w-full px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                                     />
@@ -389,7 +389,7 @@ export default function CodeCommentPanel({
                                 ) : (
                                   <>
                                     <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
-                                      {reply.content}
+                                      {renderMentionContent(reply.content, members)}
                                     </p>
                                     {onToggleReaction && (
                                       <ReactionBar
@@ -406,49 +406,50 @@ export default function CodeCommentPanel({
                             </div>
                           );
                         })}
-                      </div>
-                    )}
-
-                    {/* Reply input — shown when card is clicked */}
-                    {isReplying && user && (
-                      <div
-                        className="mt-1.5 flex gap-1.5 items-end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <img
-                          src={user.avatar_url}
-                          alt=""
-                          className="w-4 h-4 rounded-full flex-shrink-0"
-                        />
-                        <textarea
-                          value={replyContent}
-                          onChange={(e) => {
-                            setReplyContent(e.target.value);
-                            const el = e.target;
-                            el.style.height = 'auto';
-                            el.style.height = el.scrollHeight + 'px';
-                          }}
-                          placeholder="답글..."
-                          rows={1}
-                          autoFocus
-                          className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none overflow-hidden"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleReply(comment);
-                            }
-                            if (e.key === 'Escape') {
-                              setReplyToId(null);
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => handleReply(comment)}
-                          disabled={!replyContent.trim() || replySubmitting}
-                          className="p-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white flex-shrink-0"
-                        >
-                          <Send className="w-3 h-3" />
-                        </button>
+                        {/* Reply input — inline within reply thread */}
+                        {isReplying && user && (
+                          <div
+                            className="flex gap-1.5 items-start mt-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <img
+                              src={user.avatar_url}
+                              alt=""
+                              className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <MentionTextarea
+                                value={replyContent}
+                                onChange={setReplyContent}
+                                members={members}
+                                placeholder="답글..."
+                                rows={1}
+                                autoFocus
+                                className="w-full px-0 py-0.5 bg-transparent text-slate-900 dark:text-slate-100 text-xs focus:outline-none resize-none overflow-hidden placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleReply(comment);
+                                  }
+                                  if (e.key === 'Escape') {
+                                    setReplyToId(null);
+                                  }
+                                }}
+                              />
+                              {replyContent.trim() && (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={() => handleReply(comment)}
+                                    disabled={replySubmitting}
+                                    className="p-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
+                                  >
+                                    <Send className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
