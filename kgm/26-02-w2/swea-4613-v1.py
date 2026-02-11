@@ -8,7 +8,7 @@ for tc in range(1,1+T):
     b_list=[]
     r_list=[]
 
-    for i in range (N):
+    for i in range(N):
         w_list.append(color[i].count('W'))
         b_list.append(color[i].count('B'))
         r_list.append(color[i].count('R'))
