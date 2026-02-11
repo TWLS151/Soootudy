@@ -120,6 +120,7 @@ export default function HomePage() {
   const [dailyProblems, setDailyProblems] = useState<DailyProblem[]>([]);
   const [pastProblems, setPastProblems] = useState<DailyProblem[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
+  const [expandedSolver, setExpandedSolver] = useState<string | null>(null);
 
   const requiredComments = config?.required_comments ?? 3;
   const requiredSubmissions = config?.required_submissions ?? 1;
@@ -166,6 +167,17 @@ export default function HomePage() {
     setBannerClosed(true);
     sessionStorage.setItem('betaBannerClosed', 'true');
   };
+
+  // 제출자 버전 토글 바깥 클릭 닫기
+  useEffect(() => {
+    if (!expandedSolver) return;
+    const handleClick = () => setExpandedSolver(null);
+    const timer = setTimeout(() => document.addEventListener('click', handleClick), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClick);
+    };
+  }, [expandedSolver]);
 
   // 오늘의 문제 + 이전 문제 불러오기
   useEffect(() => {
@@ -427,32 +439,86 @@ export default function HomePage() {
                       </div>
 
                       {/* 제출한 팀원 */}
-                      {solvers.length > 0 && (
-                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {solvers.map((sol) => {
-                              const solMember = members[sol.member];
-                              if (!solMember) return null;
-                              return (
-                                <Link
-                                  key={sol.id}
-                                  to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
-                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-                                  title={`${solMember.name} (${sol.week})`}
-                                >
-                                  <img
-                                    src={`https://github.com/${solMember.github}.png?size=20`}
-                                    alt={solMember.name}
-                                    className="w-4 h-4 rounded-full"
-                                  />
-                                  <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
-                                </Link>
-                              );
-                            })}
+                      {solvers.length > 0 && (() => {
+                        // 멤버별 그룹화
+                        const grouped = new Map<string, typeof solvers>();
+                        for (const sol of solvers) {
+                          const existing = grouped.get(sol.member);
+                          if (existing) existing.push(sol);
+                          else grouped.set(sol.member, [sol]);
+                        }
+                        return (
+                          <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Array.from(grouped.entries()).map(([memberId, submissions]) => {
+                                const solMember = members[memberId];
+                                if (!solMember) return null;
+                                const hasMultiple = submissions.length > 1;
+                                const key = `${problem.id}-${memberId}`;
+                                const isExpanded = expandedSolver === key;
+                                const latest = submissions[submissions.length - 1];
+
+                                if (!hasMultiple) {
+                                  return (
+                                    <Link
+                                      key={memberId}
+                                      to={`/problem/${latest.member}/${latest.week}/${latest.name}`}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                      title={`${solMember.name} (${latest.week})`}
+                                    >
+                                      <img
+                                        src={`https://github.com/${solMember.github}.png?size=20`}
+                                        alt={solMember.name}
+                                        className="w-4 h-4 rounded-full"
+                                      />
+                                      <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
+                                    </Link>
+                                  );
+                                }
+
+                                return (
+                                  <div key={memberId} className="relative">
+                                    <button
+                                      onClick={() => setExpandedSolver(isExpanded ? null : key)}
+                                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors ${
+                                        isExpanded
+                                          ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-1 ring-indigo-300 dark:ring-indigo-700'
+                                          : 'bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                                      }`}
+                                    >
+                                      <img
+                                        src={`https://github.com/${solMember.github}.png?size=20`}
+                                        alt={solMember.name}
+                                        className="w-4 h-4 rounded-full"
+                                      />
+                                      <span className="text-xs text-slate-700 dark:text-slate-300">{solMember.name}</span>
+                                      <span className="text-[10px] font-medium text-indigo-500 dark:text-indigo-400">
+                                        v{submissions.length}
+                                      </span>
+                                    </button>
+                                    {isExpanded && (
+                                      <div className="absolute left-0 top-full mt-1 z-10 min-w-[120px] rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-1">
+                                        {submissions.map((sol) => (
+                                          <Link
+                                            key={sol.id}
+                                            to={`/problem/${sol.member}/${sol.week}/${sol.name}`}
+                                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                            onClick={() => setExpandedSolver(null)}
+                                          >
+                                            <Code2 className="w-3 h-3 text-slate-400" />
+                                            v{sol.version || 1}
+                                          </Link>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   );
                 })}
