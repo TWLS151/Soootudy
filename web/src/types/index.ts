@@ -2,6 +2,7 @@ export interface Member {
   name: string;
   github: string;
   admin?: boolean;
+  virtual?: boolean;
 }
 
 export interface Members {

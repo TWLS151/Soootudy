@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { sortedMemberEntries } from '../services/github';
+import { getRealMembers } from '../lib/reference';
 import type { Members } from '../types';
 
 interface SidebarProps {
@@ -102,7 +103,7 @@ export default function Sidebar({ members, weeks, open, collapsed, onClose, onNa
           {/* 팀원 탭 */}
           {tab === 'members' && (
             <ul className="space-y-1">
-              {sortedMemberEntries(members).map(([id, member]) => (
+              {sortedMemberEntries(getRealMembers(members)).map(([id, member]) => (
                 <li key={id}>
                   <Link
                     to={`/member/${id}`}

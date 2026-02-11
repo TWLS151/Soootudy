@@ -81,7 +81,7 @@ export default async function handler(req: any, res: any) {
   const membersContent = Buffer.from(membersData.content, 'base64').toString(
     'utf-8',
   );
-  const members: Record<string, { name: string; github: string }> =
+  const members: Record<string, { name: string; github: string; admin?: boolean; virtual?: boolean }> =
     JSON.parse(membersContent);
 
   // Find memberId by GitHub username
@@ -97,8 +97,19 @@ export default async function handler(req: any, res: any) {
     return res.status(403).json({ error: '팀원만 코드를 제출할 수 있습니다.' });
   }
 
+  // --- Check for targetMember (admin-only reference solution upload) ---
+  const { source, problemNumber, code, week: customWeek, editPath, targetMember } = req.body || {};
+
+  let effectiveMemberId = memberId;
+
+  if (targetMember === '_ref') {
+    if (!members[memberId]?.admin) {
+      return res.status(403).json({ error: '관리자만 참고 솔루션을 업로드할 수 있습니다.' });
+    }
+    effectiveMemberId = '_ref';
+  }
+
   // --- Validate input ---
-  const { source, problemNumber, code, week: customWeek, editPath } = req.body || {};
 
   if (!source || !problemNumber || !code) {
     return res
@@ -136,7 +147,12 @@ export default async function handler(req: any, res: any) {
 
   // --- EDIT MODE: Update a specific versioned file ---
   if (editPath && typeof editPath === 'string') {
-    if (!editPath.startsWith(`${memberId}/`)) {
+    const isRefEdit = editPath.startsWith('_ref/');
+    if (isRefEdit) {
+      if (!members[memberId]?.admin) {
+        return res.status(403).json({ error: '관리자만 참고 솔루션을 수정할 수 있습니다.' });
+      }
+    } else if (!editPath.startsWith(`${memberId}/`)) {
       return res.status(403).json({ error: '본인의 코드만 수정할 수 있습니다.' });
     }
 
@@ -160,7 +176,9 @@ export default async function handler(req: any, res: any) {
     const content = Buffer.from(code, 'utf-8').toString('base64');
     const pathParts = editPath.split('/');
     const editFileName = pathParts[2]?.replace(/\.py$/, '') || name;
-    const commitMessage = `Update ${editFileName} by ${members[memberId].name}`;
+    const commitMessage = isRefEdit
+      ? `Update ${editFileName} (참고 솔루션) by ${members[memberId].name}`
+      : `Update ${editFileName} by ${members[memberId].name}`;
 
     const putRes = await fetch(
       `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodedEditPath}`,
@@ -203,7 +221,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // --- NEW SUBMISSION: Auto-detect version ---
-  const dirPath = `${memberId}/${week}`;
+  const dirPath = `${effectiveMemberId}/${week}`;
   const dirRes = await fetch(
     `https://api.github.com/repos/${OWNER}/${REPO}/contents/${dirPath}`,
     {
@@ -245,11 +263,14 @@ export default async function handler(req: any, res: any) {
   }
 
   const versionedName = `${name}-v${nextVersion}`;
-  const filePath = `${memberId}/${week}/${versionedName}.py`;
+  const filePath = `${effectiveMemberId}/${week}/${versionedName}.py`;
 
   // --- Push to GitHub ---
   const content = Buffer.from(code, 'utf-8').toString('base64');
-  const commitMessage = `Add ${versionedName} by ${members[memberId].name}`;
+  const isRefSubmission = effectiveMemberId === '_ref';
+  const commitMessage = isRefSubmission
+    ? `Add ${versionedName} (참고 솔루션) by ${members[memberId].name}`
+    : `Add ${versionedName} by ${members[memberId].name}`;
 
   const encodedFilePath = filePath.split('/').map(encodeURIComponent).join('/');
   const putRes = await fetch(
@@ -282,7 +303,7 @@ export default async function handler(req: any, res: any) {
   return res.status(201).json({
     success: true,
     path: filePath,
-    memberId,
+    memberId: effectiveMemberId,
     week,
     name: versionedName,
   });

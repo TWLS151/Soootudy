@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { getRealMembers } from '../lib/reference';
 import type { Problem, Members } from '../types';
 
 interface StatsChartProps {
@@ -9,7 +10,8 @@ interface StatsChartProps {
 export default function StatsChart({ problems, members }: StatsChartProps) {
   const memberCounts = useMemo(() => {
     const counts: { id: string; name: string; count: number }[] = [];
-    for (const [id, member] of Object.entries(members)) {
+    const real = getRealMembers(members);
+    for (const [id, member] of Object.entries(real)) {
       const count = problems.filter((p) => p.member === id).length;
       if (count > 0) counts.push({ id, name: member.name, count });
     }

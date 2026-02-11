@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2 } from 'lucide-react';
+import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2, Lock } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
 import SourceBadge from '../components/SourceBadge';
 import DailyTaskTracker from '../components/DailyTaskTracker';
 import { sortedMemberEntries, getProblemUrl } from '../services/github';
+import { getRealMembers, hasUserSolvedBaseName } from '../lib/reference';
 import { supabase } from '../lib/supabase';
 import { getKSTToday } from '../lib/date';
 import { useStudyConfig } from '../hooks/useStudyConfig';
@@ -90,7 +91,10 @@ interface Context {
 }
 
 export default function HomePage() {
-  const { members, problems, activities, user } = useOutletContext<Context>();
+  const ctx = useOutletContext<Context>();
+  const realMembers = getRealMembers(ctx.members);
+  const { problems, activities, user } = ctx;
+  const members = ctx.members; // full members including _ref for lookups
 
   // 현재 유저 정보 해석
   const githubUsername = user?.user_metadata?.user_name || user?.user_metadata?.preferred_username;
@@ -317,7 +321,7 @@ export default function HomePage() {
         {/* 통계 */}
         <div className="flex justify-center gap-5 mt-4 text-sm">
           <span className="text-slate-600 dark:text-slate-300">
-            <strong className="text-indigo-600 dark:text-indigo-400">{Object.keys(members).length}</strong> 팀원
+            <strong className="text-indigo-600 dark:text-indigo-400">{Object.keys(realMembers).length}</strong> 팀원
           </span>
           <span className="text-slate-600 dark:text-slate-300">
             <strong className="text-indigo-600 dark:text-indigo-400">{problems.length}</strong> 풀이
@@ -398,7 +402,9 @@ export default function HomePage() {
                   // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
                   const problemNumber = problem.source === 'etc' ? problem.problem_number.replace(/ /g, '_') : problem.problem_number;
                   const problemName = `${problem.source}-${problemNumber}`;
-                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
+                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName && p.member !== '_ref');
+                  const refSolution = problems.find((p) => (p.baseName || p.name) === problemName && p.member === '_ref');
+                  const userSolved = hasUserSolvedBaseName(problemName, problems, currentMemberId);
                   return (
                     <div
                       key={problem.id}
@@ -438,8 +444,8 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* 제출한 팀원 */}
-                      {solvers.length > 0 && (() => {
+                      {/* 제출한 팀원 + 참고 솔루션 배지 */}
+                      {(solvers.length > 0 || refSolution) && (() => {
                         // 멤버별 그룹화
                         const grouped = new Map<string, typeof solvers>();
                         for (const sol of solvers) {
@@ -449,8 +455,8 @@ export default function HomePage() {
                         }
                         return (
                           <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
-                            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
-                            <div className="flex flex-wrap gap-1.5">
+                            {solvers.length > 0 && <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>}
+                            <div className="flex flex-wrap gap-1.5 items-center">
                               {Array.from(grouped.entries()).map(([memberId, submissions]) => {
                                 const solMember = members[memberId];
                                 if (!solMember) return null;
@@ -515,6 +521,26 @@ export default function HomePage() {
                                   </div>
                                 );
                               })}
+                              {refSolution && (
+                                userSolved ? (
+                                  <Link
+                                    to={`/problem/_ref/${refSolution.week}/${refSolution.name}`}
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                                    title="참고 솔루션 보기"
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                                    <span className="text-xs font-medium text-purple-700 dark:text-purple-300">참고 솔루션</span>
+                                  </Link>
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 cursor-not-allowed opacity-60"
+                                    title="제출 후 열람 가능"
+                                  >
+                                    <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                    <span className="text-xs text-slate-400 dark:text-slate-500">참고 솔루션</span>
+                                  </span>
+                                )
+                              )}
                             </div>
                           </div>
                         );
@@ -536,7 +562,9 @@ export default function HomePage() {
                   // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
                   const problemNumber = problem.source === 'etc' ? problem.problem_number.replace(/ /g, '_') : problem.problem_number;
                   const problemName = `${problem.source}-${problemNumber}`;
-                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName);
+                  const solvers = problems.filter((p) => (p.baseName || p.name) === problemName && p.member !== '_ref');
+                  const pastRefSolution = problems.find((p) => (p.baseName || p.name) === problemName && p.member === '_ref');
+                  const pastUserSolved = hasUserSolvedBaseName(problemName, problems, currentMemberId);
                   const dateLabel = new Date(problem.date + 'T00:00:00').toLocaleDateString('ko-KR', {
                     month: 'short',
                     day: 'numeric',
@@ -579,11 +607,11 @@ export default function HomePage() {
                         </div>
                       </div>
 
-                      {/* 제출한 팀원 (아바타+이름 스타일) */}
-                      {solvers.length > 0 && (
+                      {/* 제출한 팀원 (아바타+이름 스타일) + 참고 솔루션 */}
+                      {(solvers.length > 0 || pastRefSolution) && (
                         <div className="flex items-center gap-2 pl-12">
-                          <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>
-                          <div className="flex flex-wrap gap-1.5">
+                          {solvers.length > 0 && <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">제출:</span>}
+                          <div className="flex flex-wrap gap-1.5 items-center">
                             {solvers.map((sol) => {
                               const solMember = members[sol.member];
                               if (!solMember) return null;
@@ -603,6 +631,26 @@ export default function HomePage() {
                                 </Link>
                               );
                             })}
+                            {pastRefSolution && (
+                              pastUserSolved ? (
+                                <Link
+                                  to={`/problem/_ref/${pastRefSolution.week}/${pastRefSolution.name}`}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                                  title="참고 솔루션 보기"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                                  <span className="text-xs font-medium text-purple-700 dark:text-purple-300">참고 솔루션</span>
+                                </Link>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700 cursor-not-allowed opacity-60"
+                                  title="제출 후 열람 가능"
+                                >
+                                  <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                  <span className="text-xs text-slate-400 dark:text-slate-500">참고 솔루션</span>
+                                </span>
+                              )
+                            )}
                           </div>
                         </div>
                       )}
@@ -619,7 +667,7 @@ export default function HomePage() {
       <section>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">팀원</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedMemberEntries(members).map(([id, member]) => (
+          {sortedMemberEntries(realMembers).map(([id, member]) => (
             <MemberCard
               key={id}
               id={id}
@@ -636,7 +684,7 @@ export default function HomePage() {
       {problems.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">통계</h2>
-          <StatsChart problems={problems} members={members} />
+          <StatsChart problems={problems} members={realMembers} />
         </section>
       )}
 

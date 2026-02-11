@@ -157,255 +157,250 @@ export default function InlineCommentCard({
   const firstCommentColor =
     !inputOnly && comments.length > 0 ? authorColorMap.get(comments[0].github_username) : null;
 
+  // 인라인 입력 영역 렌더 (답글 모드일 때 댓글 아래에, 아닐 때 하단에)
+  const renderInput = (isReply: boolean) => {
+    if (!user) return null;
+    return (
+      <div className={`flex gap-1.5 items-start ${isReply ? 'mt-1.5' : ''}`}>
+        <img src={user.avatar_url} alt="" className="w-4 h-4 rounded-full shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <textarea
+            ref={inputRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              const el = e.target;
+              el.style.height = 'auto';
+              el.style.height = el.scrollHeight + 'px';
+            }}
+            placeholder={isReply ? '답글...' : '댓글을 입력하세요...'}
+            rows={isReply ? 1 : 2}
+            className={`w-full px-0 py-0.5 bg-transparent text-slate-900 dark:text-slate-100 focus:outline-none resize-none overflow-hidden placeholder:text-slate-400 dark:placeholder:text-slate-500 ${isReply ? 'text-xs' : 'text-sm'}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
+              if (e.key === 'Escape') {
+                if (replyTo) setReplyTo(null);
+                else onClose();
+              }
+            }}
+          />
+          {content.trim() && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="p-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white"
+              >
+                <Send className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       ref={cardRef}
-      className={`rounded-lg shadow-xl border overflow-hidden ${
+      className={`relative rounded-lg shadow-xl border overflow-hidden ${
         firstCommentColor
           ? `${firstCommentColor.bgClass} ${firstCommentColor.borderClass}`
-          : `bg-white ${dark ? 'dark:bg-slate-800' : ''} border-slate-200 ${dark ? 'dark:border-slate-700' : ''}`
+          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
       }`}
       style={{ backdropFilter: 'blur(8px)' }}
     >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-2.5 py-1 border-b"
-        style={{
-          backgroundColor: dark ? 'rgba(15,23,42,0.5)' : 'rgba(255,255,255,0.7)',
-          borderColor: dark ? 'rgba(51,65,85,0.5)' : 'rgba(203,213,225,0.5)',
-        }}
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-2 right-2 p-0.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60 z-10"
       >
-        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-          Line {lineNumber}
-        </span>
-        <button
-          onClick={onClose}
-          className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
-        >
-          <X className="w-3 h-3 text-slate-400" />
-        </button>
-      </div>
+        <X className="w-3.5 h-3.5 text-slate-400" />
+      </button>
 
-      {/* Existing comments */}
-      {!inputOnly && comments.length > 0 && (
-        <div className="px-2.5 py-1.5 space-y-2 max-h-48 overflow-y-auto">
-          {comments.map((comment) => {
-            const replies = getReplies(comment.id);
-            const color = authorColorMap.get(comment.github_username);
-            return (
-              <div key={comment.id}>
-                <div
-                  className="flex gap-1.5 cursor-pointer"
-                  onClick={() => {
-                    setReplyTo(comment.id);
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <img
-                    src={
-                      comment.github_avatar ||
-                      `https://github.com/${comment.github_username}.png?size=20`
-                    }
-                    alt=""
-                    className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="text-xs font-semibold"
-                        style={{ color: color?.dot }}
-                      >
-                        {resolveDisplayName(comment.github_username, members)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                        {formatDate(comment.created_at)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
-                    {onToggleReaction && (
-                      <ReactionBar
-                        commentId={comment.id}
-                        reactions={reactions}
-                        currentUserId={user?.id ?? null}
-                        onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
-                        resolveDisplayName={(u) => resolveDisplayName(u, members)}
-                      />
-                    )}
+      <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
+        {/* Existing comments */}
+        {!inputOnly && comments.map((comment) => {
+          const replies = getReplies(comment.id);
+          const color = authorColorMap.get(comment.github_username);
+          const isReplyTarget = replyTo === comment.id;
+          return (
+            <div key={comment.id}>
+              <div
+                className="flex gap-2 cursor-pointer"
+                onClick={() => {
+                  setReplyTo(comment.id);
+                  setTimeout(() => inputRef.current?.focus(), 50);
+                }}
+              >
+                <img
+                  src={
+                    comment.github_avatar ||
+                    `https://github.com/${comment.github_username}.png?size=24`
+                  }
+                  alt=""
+                  className="w-5 h-5 rounded-full mt-0.5 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: color?.dot }}
+                    >
+                      {resolveDisplayName(comment.github_username, members)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      {formatDate(comment.created_at)}
+                    </span>
                   </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words mt-0.5">
+                    {comment.content}
+                  </p>
+                  {onToggleReaction && (
+                    <ReactionBar
+                      commentId={comment.id}
+                      reactions={reactions}
+                      currentUserId={user?.id ?? null}
+                      onToggle={(emoji) => onToggleReaction(comment.id, emoji)}
+                      resolveDisplayName={(u) => resolveDisplayName(u, members)}
+                    />
+                  )}
                 </div>
-                {/* Replies */}
-                {replies.length > 0 && (
-                  <div className="ml-5 mt-1 space-y-1 pl-1.5 border-l-2 border-slate-200 dark:border-slate-600">
-                    {replies.map((reply) => {
-                      const replyColor = authorColorMap.get(reply.github_username);
-                      return (
-                        <div key={reply.id} className="flex gap-1.5">
-                          <img
-                            src={
-                              reply.github_avatar ||
-                              `https://github.com/${reply.github_username}.png?size=16`
-                            }
-                            alt=""
-                            className="w-3.5 h-3.5 rounded-full mt-0.5 flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1">
-                                <span
-                                  className="text-[10px] font-semibold"
-                                  style={{ color: replyColor?.dot }}
+              </div>
+              {/* Replies + inline reply input */}
+              {(replies.length > 0 || isReplyTarget) && (
+                <div className="mt-1.5 ml-7 space-y-1.5 pl-2 border-l-2 border-slate-200 dark:border-slate-600">
+                  {replies.map((reply) => {
+                    const replyColor = authorColorMap.get(reply.github_username);
+                    return (
+                      <div key={reply.id} className="flex gap-1.5">
+                        <img
+                          src={
+                            reply.github_avatar ||
+                            `https://github.com/${reply.github_username}.png?size=20`
+                          }
+                          alt=""
+                          className="w-4 h-4 rounded-full mt-0.5 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="text-[11px] font-semibold"
+                                style={{ color: replyColor?.dot }}
+                              >
+                                {resolveDisplayName(reply.github_username, members)}
+                              </span>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                {formatDate(reply.created_at)}
+                                {reply.created_at !== reply.updated_at && ' (수정됨)'}
+                              </span>
+                            </div>
+                            {user && user.id === reply.user_id && onDeleteComment && (
+                              <div
+                                className="relative"
+                                ref={openMenuId === reply.id ? menuRef : null}
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(
+                                      openMenuId === reply.id ? null : reply.id
+                                    );
+                                  }}
+                                  className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
                                 >
-                                  {resolveDisplayName(reply.github_username, members)}
-                                </span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                                  {formatDate(reply.created_at)}
-                                  {reply.created_at !== reply.updated_at && ' (수정됨)'}
-                                </span>
-                              </div>
-                              {user && user.id === reply.user_id && onDeleteComment && (
-                                <div
-                                  className="relative"
-                                  ref={openMenuId === reply.id ? menuRef : null}
-                                >
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenMenuId(
-                                        openMenuId === reply.id ? null : reply.id
-                                      );
-                                    }}
-                                    className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600"
-                                  >
-                                    <MoreVertical className="w-2.5 h-2.5 text-slate-400" />
-                                  </button>
-                                  {openMenuId === reply.id && (
-                                    <div className="absolute right-0 top-5 z-10 w-24 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-0.5">
-                                      {onUpdateComment && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingId(reply.id);
-                                            setEditContent(reply.content);
-                                            setOpenMenuId(null);
-                                          }}
-                                          className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                                        >
-                                          <Edit2 className="w-2.5 h-2.5" /> 수정
-                                        </button>
-                                      )}
+                                  <MoreVertical className="w-3 h-3 text-slate-400" />
+                                </button>
+                                {openMenuId === reply.id && (
+                                  <div className="absolute right-0 top-5 z-10 w-24 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-0.5">
+                                    {onUpdateComment && (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleDeleteReply(reply.id);
+                                          setEditingId(reply.id);
+                                          setEditContent(reply.content);
+                                          setOpenMenuId(null);
                                         }}
-                                        className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                        className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                                       >
-                                        <Trash2 className="w-2.5 h-2.5" /> 삭제
+                                        <Edit2 className="w-2.5 h-2.5" /> 수정
                                       </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            {editingId === reply.id ? (
-                              <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                                <textarea
-                                  value={editContent}
-                                  onChange={(e) => setEditContent(e.target.value)}
-                                  rows={2}
-                                  className="w-full px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-[10px] focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
-                                />
-                                <div className="flex gap-1.5">
-                                  <button
-                                    onClick={() => handleUpdateReply(reply.id)}
-                                    className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium rounded-md"
-                                  >
-                                    저장
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setEditingId(null);
-                                      setEditContent('');
-                                    }}
-                                    className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium rounded-md"
-                                  >
-                                    취소
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <p className="text-[10px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">
-                                  {reply.content}
-                                </p>
-                                {onToggleReaction && (
-                                  <ReactionBar
-                                    commentId={reply.id}
-                                    reactions={reactions}
-                                    currentUserId={user?.id ?? null}
-                                    onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
-                                    resolveDisplayName={(u) => resolveDisplayName(u, members)}
-                                  />
+                                    )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteReply(reply.id);
+                                      }}
+                                      className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                                    >
+                                      <Trash2 className="w-2.5 h-2.5" /> 삭제
+                                    </button>
+                                  </div>
                                 )}
-                              </>
+                              </div>
                             )}
                           </div>
+                          {editingId === reply.id ? (
+                            <div className="space-y-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                              <textarea
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                rows={2}
+                                className="w-full px-2 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                              />
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => handleUpdateReply(reply.id)}
+                                  className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium rounded-md"
+                                >
+                                  저장
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditContent('');
+                                  }}
+                                  className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium rounded-md"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words mt-0.5">
+                                {reply.content}
+                              </p>
+                              {onToggleReaction && (
+                                <ReactionBar
+                                  commentId={reply.id}
+                                  reactions={reactions}
+                                  currentUserId={user?.id ?? null}
+                                  onToggle={(emoji) => onToggleReaction(reply.id, emoji)}
+                                  resolveDisplayName={(u) => resolveDisplayName(u, members)}
+                                />
+                              )}
+                            </>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                      </div>
+                    );
+                  })}
+                  {/* 답글 입력 — 댓글 클릭 시 해당 답글 스레드 안에 표시 */}
+                  {isReplyTarget && renderInput(true)}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-      {/* Input */}
-      {user && (
-        <div
-          className="px-2.5 py-1.5 border-t"
-          style={{
-            borderColor: dark ? 'rgba(51,65,85,0.5)' : 'rgba(203,213,225,0.5)',
-          }}
-        >
-          <div className="flex gap-1.5 items-end">
-            <img src={user.avatar_url} alt="" className="w-4 h-4 rounded-full flex-shrink-0" />
-            <textarea
-              ref={inputRef}
-              value={content}
-              onChange={(e) => {
-                setContent(e.target.value);
-                // Auto-expand
-                const el = e.target;
-                el.style.height = 'auto';
-                el.style.height = el.scrollHeight + 'px';
-              }}
-              placeholder={replyTo ? '답글...' : '댓글...'}
-              rows={1}
-              className="flex-1 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none overflow-hidden"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-                if (e.key === 'Escape') {
-                  onClose();
-                }
-              }}
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!content.trim() || submitting}
-              className="p-1 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white flex-shrink-0"
-            >
-              <Send className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      )}
+        {/* 새 댓글 입력 — 답글 모드가 아닐 때 or inputOnly일 때 하단에 표시 */}
+        {!replyTo && renderInput(false)}
+      </div>
     </div>
   );
 }

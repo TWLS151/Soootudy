@@ -8,10 +8,11 @@ import CodeCommentPanel from '../components/CodeCommentPanel';
 import ReactionBar from '../components/ReactionBar';
 import { useCodeComments } from '../hooks/useCodeComments';
 import { useCodeBookmarks, useBookmarkCount } from '../hooks/useCodeBookmarks';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, Circle, Copy, Star } from 'lucide-react';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, Circle, Copy, Star, Sparkles, Lock } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
+import { hasUserSolvedBaseName } from '../lib/reference';
 import type { Members, Problem } from '../types';
 
 interface Context {
@@ -69,7 +70,9 @@ export default function ProblemPage() {
   );
 
   const member = memberId ? members[memberId] : undefined;
-  const isOwner = currentMemberId === memberId;
+  const isRefSolution = memberId === '_ref';
+  const isAdmin = currentMemberId ? members[currentMemberId]?.admin === true : false;
+  const isOwner = isRefSolution ? isAdmin : currentMemberId === memberId;
 
   // 댓글 데이터
   const commentData = useCodeComments(problem?.id || '', members);
@@ -451,16 +454,40 @@ export default function ProblemPage() {
     );
   }
 
+  // 참고 솔루션 잠금: 본인 제출 전에는 볼 수 없음 (admin은 항상 열람 가능)
+  const refBaseName = problem.baseName || problem.name;
+  const userSolvedRef = hasUserSolvedBaseName(refBaseName, problems, currentMemberId);
+  if (isRefSolution && !isAdmin && !userSolvedRef) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+          <Lock className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">참고 솔루션 잠금</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-sm">
+          이 문제에 대한 풀이를 먼저 제출하면 참고 솔루션을 열람할 수 있습니다.
+        </p>
+        <Link
+          to={`/submit?source=${problem.source}&number=${refBaseName.replace(/^(swea|boj|etc)-/, '')}`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+        >
+          코드 제출하기
+        </Link>
+      </div>
+    );
+  }
+
   const displaySource = (resolvedSource || problem.source) as 'swea' | 'boj' | 'etc';
   const problemUrl = getProblemUrl(problem.name, displaySource);
 
-  // 같은 문제를 푼 다른 팀원들 + 같은 멤버의 다른 버전
+  // 같은 문제를 푼 다른 팀원들 + 같은 멤버의 다른 버전 (_ref 제외)
   const otherSolutions = useMemo(() => {
     const currentBaseName = problem.baseName || problem.name;
     return problems.filter((p) => {
       const pBaseName = p.baseName || p.name;
       if (pBaseName !== currentBaseName) return false;
       if (p.id === problem.id) return false;
+      if (p.member === '_ref') return false;
       return true;
     });
   }, [problems, problem.baseName, problem.name, problem.id]);
@@ -510,14 +537,14 @@ export default function ProblemPage() {
       });
   }, [commentData.comments]);
 
-  // 같은 문제를 푼 멤버 목록 (멤버 네비게이션용)
+  // 같은 문제를 푼 멤버 목록 (멤버 네비게이션용, _ref 제외)
   const sameProblemMembers = useMemo(() => {
     if (!problem) return [];
     const currentBaseName = problem.baseName || problem.name;
     const memberSet = new Set<string>();
     for (const p of problems) {
       const pBaseName = p.baseName || p.name;
-      if (pBaseName === currentBaseName && p.week === week) {
+      if (pBaseName === currentBaseName && p.week === week && p.member !== '_ref') {
         memberSet.add(p.member);
       }
     }
@@ -657,9 +684,16 @@ export default function ProblemPage() {
             )}
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-            <Link to={`/member/${memberId}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
-              {member.name}
-            </Link>
+            {isRefSolution ? (
+              <span className="inline-flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium">
+                <Sparkles className="w-4 h-4" />
+                참고 솔루션
+              </span>
+            ) : (
+              <Link to={`/member/${memberId}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
+                {member.name}
+              </Link>
+            )}
             <span>·</span>
             <Link to={`/weekly/${week}`} className="hover:text-indigo-600 dark:hover:text-indigo-400">
               {week}

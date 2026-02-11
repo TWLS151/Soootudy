@@ -3,6 +3,7 @@ import { useOutletContext, Link } from 'react-router-dom';
 import { Flame, Trophy, Target, TrendingUp, Grid3x3, Check } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { sortedMemberEntries } from '../services/github';
+import { getRealMembers } from '../lib/reference';
 import type { Members, Problem, Activities } from '../types';
 
 interface Context {
@@ -16,7 +17,9 @@ type BoardType = 'total' | 'streak' | 'weekly';
 type MainTab = 'leaderboard' | 'matrix';
 
 export default function LabPage() {
-  const { members, problems, activities } = useOutletContext<Context>();
+  const ctx = useOutletContext<Context>();
+  const members = getRealMembers(ctx.members);
+  const { problems, activities } = ctx;
   const [activeTab, setActiveTab] = useState<MainTab>('leaderboard');
   const [activeBoard, setActiveBoard] = useState<BoardType>('total');
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);

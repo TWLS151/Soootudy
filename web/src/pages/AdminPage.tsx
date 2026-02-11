@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2 } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { supabase } from '../lib/supabase';
 import { getKSTToday } from '../lib/date';
 import { useStudyConfig } from '../hooks/useStudyConfig';
 import { useAllMembersProgress } from '../hooks/useAllMembersProgress';
+import { getRealMembers } from '../lib/reference';
 import type { Members, Problem, DailyProblem } from '../types';
 import type { User } from '@supabase/supabase-js';
 
@@ -14,12 +16,13 @@ interface Context {
   members: Members;
   problems: Problem[];
   user: User;
+  dark: boolean;
 }
 
 type Source = 'swea' | 'boj' | 'etc';
 
 export default function AdminPage() {
-  const { members, problems, user } = useOutletContext<Context>();
+  const { members, problems, user, dark } = useOutletContext<Context>();
   const navigate = useNavigate();
 
   // Admin check
@@ -68,6 +71,15 @@ export default function AdminPage() {
   const [formNumber, setFormNumber] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formUrl, setFormUrl] = useState('');
+
+  // Reference solution form
+  const [showRefForm, setShowRefForm] = useState(false);
+  const [refSource, setRefSource] = useState<Source>('swea');
+  const [refNumber, setRefNumber] = useState('');
+  const [refCode, setRefCode] = useState('');
+  const [refSubmitting, setRefSubmitting] = useState(false);
+  const [refError, setRefError] = useState<string | null>(null);
+  const [refSuccess, setRefSuccess] = useState(false);
 
   // Calendar navigation
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -145,6 +157,49 @@ export default function AdminPage() {
       setDeleteId(id);
       // Auto-cancel after 3s
       setTimeout(() => setDeleteId((prev) => (prev === id ? null : prev)), 3000);
+    }
+  }
+
+  async function handleRefSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!refNumber.trim() || !refCode.trim() || refSubmitting) return;
+
+    setRefSubmitting(true);
+    setRefError(null);
+    setRefSuccess(false);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('로그인이 필요합니다.');
+
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          source: refSource,
+          problemNumber: refNumber.trim(),
+          code: refCode,
+          targetMember: '_ref',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '업로드에 실패했습니다.');
+
+      setRefSuccess(true);
+      setRefCode('');
+      setRefNumber('');
+      // 캐시 삭제
+      try {
+        sessionStorage.removeItem('sootudy_tree');
+      } catch { /* ignore */ }
+    } catch (err) {
+      setRefError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setRefSubmitting(false);
     }
   }
 
@@ -347,7 +402,7 @@ export default function AdminPage() {
           {!progressLoading && (() => {
             const requiredComments = config?.required_comments ?? 3;
             const requiredSubmissions = config?.required_submissions ?? 1;
-            const incomplete = Object.entries(members).filter(([id]) => {
+            const incomplete = Object.entries(getRealMembers(members)).filter(([id]) => {
               const memberComments = progressMap.get(id) ?? 0;
               const commentsOk = memberComments >= requiredComments;
               const submittedCount = todayProblems.filter((dp) => {
@@ -402,7 +457,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(members).map(([id, member]) => {
+                {Object.entries(getRealMembers(members)).map(([id, member]) => {
                   const memberComments = progressMap.get(id) ?? 0;
                   const requiredComments = config?.required_comments ?? 3;
                   const requiredSubmissions = config?.required_submissions ?? 1;
@@ -679,6 +734,125 @@ export default function AdminPage() {
           <span className="text-sm font-medium">문제 추가</span>
         </button>
       )}
+
+      {/* 참고 솔루션 업로드 */}
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-purple-500 dark:text-purple-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">참고 솔루션</h2>
+          </div>
+          {!showRefForm && (
+            <button
+              onClick={() => { setShowRefForm(true); setRefSuccess(false); setRefError(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              업로드
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          AI 풀이, 모범 답안 등 참고 솔루션을 업로드합니다. 팀원이 해당 문제를 먼저 제출해야 열람할 수 있습니다.
+        </p>
+
+        {refSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-300">
+            참고 솔루션이 업로드되었습니다!
+          </div>
+        )}
+        {refError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+            {refError}
+          </div>
+        )}
+
+        {showRefForm && (
+          <form onSubmit={handleRefSubmit} className="space-y-4">
+            {/* 출처 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">출처</label>
+              <div className="flex gap-2">
+                {(['swea', 'boj', 'etc'] as Source[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => { setRefSource(s); setRefNumber(''); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      refSource === s
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {s === 'swea' ? 'SWEA' : s === 'boj' ? 'BOJ' : '기타'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 문제번호/이름 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {refSource === 'etc' ? '문제 이름' : '문제 번호'}
+              </label>
+              <input
+                type="text"
+                value={refNumber}
+                onChange={(e) => {
+                  if (refSource === 'etc') {
+                    setRefNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
+                  } else {
+                    setRefNumber(e.target.value.replace(/\D/g, ''));
+                  }
+                }}
+                placeholder={refSource === 'etc' ? '이분탐색연습' : '6001'}
+                className="w-full max-w-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+
+            {/* 코드 에디터 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">코드</label>
+              <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                <Editor
+                  height="300px"
+                  language="python"
+                  theme={dark ? 'vs-dark' : 'light'}
+                  value={refCode}
+                  onChange={(v) => setRefCode(v || '')}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 4,
+                    wordWrap: 'on',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={refSubmitting || !refNumber.trim() || !refCode.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                {refSubmitting ? '업로드 중...' : '참고 솔루션 업로드'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRefForm(false)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
 
       {/* 예약된 문제 (미래) */}
       {futureProblems.length > 0 && (
