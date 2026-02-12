@@ -497,6 +497,7 @@ export default function SubmitPage() {
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
+                padding: { top: 16 },
                 tabSize: 4,
                 wordWrap: 'on',
                 readOnly: submitting,
