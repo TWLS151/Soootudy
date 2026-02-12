@@ -1,132 +1,91 @@
 import type { Members, Activities } from '../types';
-import { getCache, setCache } from './cache';
+import { supabase } from '../lib/supabase';
+import { getKSTToday } from '../lib/date';
 
-const REPO_OWNER = 'TWLS151';
-const REPO_NAME = 'Soootudy';
-const API_BASE = 'https://api.github.com';
-const CACHE_KEY_ACTIVITY = 'sootudy_activity';
+const START_DATE = '2026-02-05';
 
-function toKSTDateStr(isoDate: string): string {
-  const utc = new Date(isoDate);
-  const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
-  const y = kst.getFullYear();
-  const m = String(kst.getMonth() + 1).padStart(2, '0');
-  const d = String(kst.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function toDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
+function isWeekend(dateStr: string): boolean {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const day = d.getUTCDay();
   return day === 0 || day === 6;
 }
 
-function getPreviousWeekday(date: Date): Date {
-  const prev = new Date(date);
-  prev.setDate(prev.getDate() - 1);
-  while (isWeekend(prev)) {
-    prev.setDate(prev.getDate() - 1);
-  }
-  return prev;
+function getPreviousWeekday(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  do {
+    d.setUTCDate(d.getUTCDate() - 1);
+  } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+  return d.toISOString().split('T')[0];
 }
 
+/**
+ * 연속 제출 수 계산.
+ * 오늘부터 역순으로 평일만 확인하며, 연속으로 제출한 일수를 반환.
+ */
 export function calculateStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
 
-  // 2026-02-05 이후의 날짜만 필터링
-  const startDate = new Date('2026-02-05T00:00:00+09:00');
-  const filteredDates = dates.filter(date => {
-    const d = new Date(date + 'T00:00:00+09:00');
-    return d >= startDate;
-  });
+  const filtered = dates.filter(d => d >= START_DATE);
+  if (filtered.length === 0) return 0;
 
-  if (filteredDates.length === 0) return 0;
-  const dateSet = new Set(filteredDates);
+  const dateSet = new Set(filtered);
+  let current = getKSTToday();
 
-  const now = new Date();
-  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  let current = new Date(kstNow);
-  current.setHours(0, 0, 0, 0);
-
+  // 주말이면 이전 평일로 이동
   while (isWeekend(current)) {
     current = getPreviousWeekday(current);
   }
 
-  if (!dateSet.has(toDateStr(current))) {
+  // 오늘 제출 안 했으면 이전 평일 확인
+  if (!dateSet.has(current)) {
     current = getPreviousWeekday(current);
-    if (!dateSet.has(toDateStr(current))) {
+    if (!dateSet.has(current)) {
       return 0;
     }
   }
 
+  // 역순으로 연속 제출 확인
   let streak = 0;
-  while (dateSet.has(toDateStr(current))) {
+  while (dateSet.has(current)) {
     streak++;
     current = getPreviousWeekday(current);
-
-    // startDate 이전으로는 가지 않음
-    if (current < startDate) break;
+    if (current < START_DATE) break;
   }
 
   return streak;
 }
 
-export async function fetchCommitActivity(members: Members): Promise<Activities> {
-  const cached = getCache<Activities>(CACHE_KEY_ACTIVITY);
-  if (cached) return cached;
+/**
+ * Supabase submissions 테이블에서 제출 기록을 조회하여 활동 데이터 계산.
+ */
+export async function fetchSubmissionActivity(members: Members): Promise<Activities> {
+  const { data, error } = await supabase
+    .from('submissions')
+    .select('member_id, date')
+    .gte('date', START_DATE)
+    .order('date', { ascending: true });
 
-  const since = new Date();
-  since.setDate(since.getDate() - 84);
-
-  let commits: any[] = [];
-  try {
-    let res: Response;
-    if (import.meta.env.DEV) {
-      res = await fetch(
-        `${API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/commits?per_page=100&since=${since.toISOString()}`
-      );
-    } else {
-      res = await fetch(`/api/commits?per_page=100&since=${since.toISOString()}`);
-    }
-    if (res.ok) {
-      commits = await res.json();
-    }
-  } catch {
-    console.warn('커밋 데이터 로드 실패');
+  if (error || !data) {
+    console.warn('제출 기록 로드 실패:', error);
+    return {};
   }
 
-  const githubToMember: Record<string, string> = {};
-  for (const [id, member] of Object.entries(members)) {
-    githubToMember[member.github.toLowerCase()] = id;
-  }
-
-  const memberDates: Record<string, Set<string>> = {};
-  for (const commit of commits) {
-    const login = commit.author?.login?.toLowerCase();
-    if (!login) continue;
-    const memberId = githubToMember[login];
-    if (!memberId) continue;
-
-    const date = toKSTDateStr(commit.commit.author.date);
-    if (!memberDates[memberId]) memberDates[memberId] = new Set();
-    memberDates[memberId].add(date);
+  // 멤버별 날짜 그룹핑
+  const memberDates: Record<string, string[]> = {};
+  for (const row of data) {
+    if (!memberDates[row.member_id]) memberDates[row.member_id] = [];
+    memberDates[row.member_id].push(row.date);
   }
 
   const activities: Activities = {};
   for (const id of Object.keys(members)) {
-    const dates = memberDates[id] ? Array.from(memberDates[id]).sort() : [];
+    if (members[id].virtual) continue;
+    const dates = memberDates[id] || [];
     activities[id] = {
       dates,
       streak: calculateStreak(dates),
     };
   }
 
-  setCache(CACHE_KEY_ACTIVITY, activities);
   return activities;
 }

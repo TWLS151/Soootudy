@@ -300,6 +300,16 @@ export default async function handler(req: any, res: any) {
     });
   }
 
+  // 제출 기록 저장 (연속 제출 계산용, 실패해도 무시)
+  if (effectiveMemberId !== '_ref') {
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const todayKST = kstNow.toISOString().split('T')[0];
+    await supabase
+      .from('submissions')
+      .upsert({ member_id: effectiveMemberId, date: todayKST }, { onConflict: 'member_id,date' })
+      .then(() => {});
+  }
+
   return res.status(201).json({
     success: true,
     path: filePath,

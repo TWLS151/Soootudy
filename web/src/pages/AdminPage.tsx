@@ -48,8 +48,11 @@ export default function AdminPage() {
   const [submissionCount, setSubmissionCount] = useState(1);
   const [configSaving, setConfigSaving] = useState(false);
 
+  // 현황 날짜 선택
+  const [statusDate, setStatusDate] = useState(() => getKSTToday());
+
   // 전체 팀원 댓글 현황
-  const { progressMap, loading: progressLoading } = useAllMembersProgress(members);
+  const { progressMap, loading: progressLoading } = useAllMembersProgress(members, statusDate);
 
   useEffect(() => {
     if (config) {
@@ -231,6 +234,26 @@ export default function AdminPage() {
     [allProblems, today]
   );
 
+  // 현황 섹션에 표시할 문제 (선택된 날짜 기준)
+  const statusProblems = useMemo(
+    () => allProblems.filter((p) => p.date === statusDate),
+    [allProblems, statusDate]
+  );
+
+  const isStatusToday = statusDate === today;
+
+  const statusDateLabel = new Date(statusDate + 'T00:00:00').toLocaleDateString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
+
+  // 가장 이른 날짜 (이전 버튼 비활성화용)
+  const earliestDate = useMemo(() => {
+    if (allProblems.length === 0) return null;
+    return allProblems[0].date;
+  }, [allProblems]);
+
   // Calendar helpers
   const calendarDays = useMemo(() => {
     const { year, month } = calendarMonth;
@@ -394,36 +417,74 @@ export default function AdminPage() {
         </div>
       </section>
 
-      {/* 오늘의 현황 */}
+      {/* 일일 현황 */}
       <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">오늘의 현황</h2>
-          {!progressLoading && (() => {
-            const requiredComments = config?.required_comments ?? 3;
-            const requiredSubmissions = config?.required_submissions ?? 1;
-            const incomplete = Object.entries(getRealMembers(members)).filter(([id]) => {
-              const memberComments = progressMap.get(id) ?? 0;
-              const commentsOk = memberComments >= requiredComments;
-              const submittedCount = todayProblems.filter((dp) => {
-                // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
-                const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
-                const problemName = `${dp.source}-${problemNumber}`;
-                return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
-              }).length;
-              const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);
-              return !commentsOk || !submissionsOk;
-            });
-            return incomplete.length > 0 ? (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
-                미완료 {incomplete.length}명
-              </span>
-            ) : (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400">
-                모두 완료
-              </span>
-            );
-          })()}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {isStatusToday ? '오늘의 현황' : '일일 현황'}
+            </h2>
+            {!progressLoading && (() => {
+              const requiredComments = config?.required_comments ?? 3;
+              const requiredSubmissions = config?.required_submissions ?? 1;
+              const incomplete = Object.entries(getRealMembers(members)).filter(([id]) => {
+                const memberComments = progressMap.get(id) ?? 0;
+                const commentsOk = memberComments >= requiredComments;
+                const submittedCount = statusProblems.filter((dp) => {
+                  const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
+                  const problemName = `${dp.source}-${problemNumber}`;
+                  return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
+                }).length;
+                const submissionsOk = statusProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, statusProblems.length);
+                return !commentsOk || !submissionsOk;
+              });
+              return incomplete.length > 0 ? (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
+                  미완료 {incomplete.length}명
+                </span>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400">
+                  모두 완료
+                </span>
+              );
+            })()}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const d = new Date(statusDate + 'T00:00:00');
+                d.setDate(d.getDate() - 1);
+                setStatusDate(d.toISOString().split('T')[0]);
+              }}
+              disabled={!earliestDate || statusDate <= earliestDate}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setStatusDate(today)}
+              className={`text-sm font-medium px-2 py-1 rounded-lg transition-colors ${
+                isStatusToday
+                  ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              {statusDateLabel}
+            </button>
+            <button
+              onClick={() => {
+                const d = new Date(statusDate + 'T00:00:00');
+                d.setDate(d.getDate() + 1);
+                const next = d.toISOString().split('T')[0];
+                if (next <= today) setStatusDate(next);
+              }}
+              disabled={isStatusToday}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {progressLoading ? (
@@ -432,9 +493,9 @@ export default function AdminPage() {
               <DotLottieReact src="/cat.lottie" loop autoplay />
             </div>
           </div>
-        ) : todayProblems.length === 0 && (config?.required_comments ?? 3) === 0 ? (
+        ) : statusProblems.length === 0 && (config?.required_comments ?? 3) === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
-            오늘 등록된 과제가 없습니다.
+            {isStatusToday ? '오늘 등록된 과제가 없습니다.' : '해당 날짜에 등록된 과제가 없습니다.'}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -463,13 +524,13 @@ export default function AdminPage() {
                   const requiredSubmissions = config?.required_submissions ?? 1;
                   const commentsOk = memberComments >= requiredComments;
 
-                  const submittedCount = todayProblems.filter((dp) => {
+                  const submittedCount = statusProblems.filter((dp) => {
                     // etc 문제의 경우 공백을 언더스코어로 치환하여 매칭
                     const problemNumber = dp.source === 'etc' ? dp.problem_number.replace(/ /g, '_') : dp.problem_number;
                     const problemName = `${dp.source}-${problemNumber}`;
                     return problems.some((p) => p.member === id && (p.baseName || p.name) === problemName);
                   }).length;
-                  const submissionsOk = todayProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, todayProblems.length);
+                  const submissionsOk = statusProblems.length === 0 || submittedCount >= Math.min(requiredSubmissions, statusProblems.length);
                   const allComplete = submissionsOk && commentsOk;
 
                   return (
@@ -492,13 +553,13 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        {todayProblems.length === 0 ? (
+                        {statusProblems.length === 0 ? (
                           <span className="text-xs text-slate-400">-</span>
                         ) : submissionsOk ? (
                           <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
                         ) : (
                           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {submittedCount}/{Math.min(requiredSubmissions, todayProblems.length)}
+                            {submittedCount}/{Math.min(requiredSubmissions, statusProblems.length)}
                           </span>
                         )}
                       </td>

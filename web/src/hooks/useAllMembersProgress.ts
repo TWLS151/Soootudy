@@ -9,11 +9,11 @@ interface MemberCommentRow {
 }
 
 /**
- * 모든 팀원의 오늘(KST) 댓글 수를 한번에 조회.
+ * 모든 팀원의 특정 날짜(KST) 댓글 수를 한번에 조회.
  * 자기 문제 제외: problem_id가 해당 멤버의 id/로 시작하는 건 카운트하지 않음.
  * 반환: memberId → commentCount
  */
-export function useAllMembersProgress(members: Members) {
+export function useAllMembersProgress(members: Members, date?: string) {
   const [progressMap, setProgressMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +33,8 @@ export function useAllMembersProgress(members: Members) {
     }
 
     try {
-      const today = getKSTToday();
-      const startOfDayKST = `${today}T00:00:00+09:00`;
+      const targetDate = date || getKSTToday();
+      const startOfDayKST = `${targetDate}T00:00:00+09:00`;
       const endDate = new Date(new Date(startOfDayKST).getTime() + 24 * 60 * 60 * 1000);
       const endOfDayUTC = endDate.toISOString();
 
@@ -71,7 +71,7 @@ export function useAllMembersProgress(members: Members) {
     } finally {
       setLoading(false);
     }
-  }, [members, githubToMemberId]);
+  }, [members, date, githubToMemberId]);
 
   useEffect(() => {
     loadProgress();

@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Upload, Pencil, AlertCircle, FileCode, ExternalLink, X } from 'lucide-react';
 import SlotMachineNumber from '../components/SlotMachineNumber';
-import { getKSTToday } from '../lib/date';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import confetti from 'canvas-confetti';
@@ -100,6 +99,7 @@ export default function SubmitPage() {
   const [mascotLottie] = useState(() => MASCOT_LOTTIES[Math.floor(Math.random() * MASCOT_LOTTIES.length)]);
   const [cheerMessage] = useState(() => CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)]);
   const confettiFired = useRef(false);
+  const preSubmitStreakRef = useRef(0);
   const [editorHeight, setEditorHeight] = useState(300);
   const [newlyUnlocked, setNewlyUnlocked] = useState<CharacterDef[]>([]);
 
@@ -194,6 +194,7 @@ export default function SubmitPage() {
   async function handleSubmit() {
     setError(null);
     setSubmitting(true);
+    preSubmitStreakRef.current = memberId ? (activities[memberId]?.streak ?? 0) : 0;
 
     try {
       const {
@@ -230,10 +231,9 @@ export default function SubmitPage() {
         throw new Error(data.error || '제출에 실패했습니다.');
       }
 
-      // 캐시 삭제
+      // 트리 캐시 삭제
       try {
         sessionStorage.removeItem('sootudy_tree');
-        sessionStorage.removeItem('sootudy_activity');
       } catch {
         // sessionStorage 사용 불가 시 무시
       }
@@ -262,16 +262,9 @@ export default function SubmitPage() {
     }
   }
 
-  // 스트릭 계산 (성공 화면용)
-  const oldStreak = memberId ? (activities[memberId]?.streak ?? 0) : 0;
-  const newStreak = useMemo(() => {
-    if (!memberId) return 0;
-    const activity = activities[memberId];
-    if (!activity) return 1;
-    const today = getKSTToday();
-    const alreadyHasToday = activity.dates.includes(today);
-    return alreadyHasToday ? oldStreak : oldStreak + 1;
-  }, [memberId, activities, oldStreak]);
+  // 스트릭 (성공 화면용 — addProblem 낙관적 업데이트 후 activities에서 바로 반영)
+  const oldStreak = preSubmitStreakRef.current;
+  const newStreak = memberId ? (activities[memberId]?.streak ?? 0) : 0;
 
   // 성공 화면
   if (successData) {

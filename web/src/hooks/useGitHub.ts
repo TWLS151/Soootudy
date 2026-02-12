@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Members, Problem, Activities } from '../types';
-import { fetchRepoTree, fetchMembers, parseProblemsFromTree, extractWeeks, fetchCommitActivity } from '../services/github';
+import { fetchRepoTree, fetchMembers, parseProblemsFromTree, extractWeeks } from '../services/github';
+import { fetchSubmissionActivity, calculateStreak } from '../services/activity';
+import { getKSTToday } from '../lib/date';
 
 interface UseGitHubResult {
   members: Members;
@@ -32,8 +34,8 @@ export function useGitHub(): UseGitHubResult {
         setProblems(parsed);
         setWeeks(extractWeeks(parsed));
 
-        // 커밋 활동 데이터 (비동기, 실패해도 메인 로드에 영향 없음)
-        fetchCommitActivity(membersData).then((act) => {
+        // Supabase에서 제출 기록 조회 (비동기, 실패해도 메인 로드에 영향 없음)
+        fetchSubmissionActivity(membersData).then((act) => {
           if (!cancelled) setActivities(act);
         });
       } catch (e) {
@@ -62,6 +64,23 @@ export function useGitHub(): UseGitHubResult {
     setWeeks((prev) => {
       if (prev.includes(problem.week)) return prev;
       return [problem.week, ...prev].sort((a, b) => b.localeCompare(a));
+    });
+
+    // 제출 후 낙관적 업데이트: 오늘 날짜를 멤버의 활동에 추가
+    const memberId = problem.member;
+    if (memberId === '_ref') return;
+    const today = getKSTToday();
+    setActivities((prev) => {
+      const existing = prev[memberId] || { dates: [], streak: 0 };
+      if (existing.dates.includes(today)) return prev;
+      const newDates = [...existing.dates, today].sort();
+      return {
+        ...prev,
+        [memberId]: {
+          dates: newDates,
+          streak: calculateStreak(newDates),
+        },
+      };
     });
   }, []);
 

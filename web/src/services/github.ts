@@ -3,7 +3,7 @@ import { getCache, setCache } from './cache';
 
 // Re-export for backward compatibility
 export { parseSource, parseSourceFromCode, parseProblemsFromTree, sortedMemberEntries, extractWeeks, getProblemUrl } from './parser';
-export { calculateStreak, fetchCommitActivity } from './activity';
+export { calculateStreak, fetchSubmissionActivity } from './activity';
 
 const REPO_OWNER = 'TWLS151';
 const REPO_NAME = 'Soootudy';
