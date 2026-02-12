@@ -82,7 +82,9 @@ export default function SubmitPage() {
     // swea-1234, boj-5678, etc-이름 등 매칭
     const match = eName.match(/^(swea|boj|etc)-(.+?)(-v\d+)?$/);
     if (!match) return null;
-    return { memberId: eMemberId, week: eWeek, source: match[1] as 'swea' | 'boj' | 'etc', problemNumber: match[2], fullName: eName };
+    const src = match[1] as 'swea' | 'boj' | 'etc';
+    const problemNum = src === 'etc' ? match[2].replace(/_/g, ' ') : match[2];
+    return { memberId: eMemberId, week: eWeek, source: src, problemNumber: problemNum, fullName: eName };
   }, [editParam]);
 
   const [source, setSource] = useState<'swea' | 'boj' | 'etc'>(editParts?.source || presetSource || 'swea');
