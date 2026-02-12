@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen, Database } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
@@ -83,10 +83,6 @@ export default function AdminPage() {
   const [refSubmitting, setRefSubmitting] = useState(false);
   const [refError, setRefError] = useState<string | null>(null);
   const [refSuccess, setRefSuccess] = useState(false);
-
-  // Backfill state
-  const [backfilling, setBackfilling] = useState(false);
-  const [backfillResult, setBackfillResult] = useState<{ success: boolean; count?: number; error?: string } | null>(null);
 
   // Calendar navigation
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -207,36 +203,6 @@ export default function AdminPage() {
       setRefError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     } finally {
       setRefSubmitting(false);
-    }
-  }
-
-  async function handleBackfill() {
-    if (backfilling) return;
-    setBackfilling(true);
-    setBackfillResult(null);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('로그인이 필요합니다.');
-
-      const res = await fetch('/api/backfill-submissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '백필에 실패했습니다.');
-      setBackfillResult({ success: true, count: data.count });
-    } catch (err) {
-      setBackfillResult({
-        success: false,
-        error: err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.',
-      });
-    } finally {
-      setBackfilling(false);
     }
   }
 
@@ -451,40 +417,6 @@ export default function AdminPage() {
         </div>
       </section>
 
-      {/* 제출 기록 마이그레이션 */}
-      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">제출 기록 마이그레이션</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                GitHub 커밋 기록에서 제출 날짜를 가져와 연속 제출 데이터를 복원합니다.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleBackfill}
-            disabled={backfilling}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Database className="w-4 h-4" />
-            {backfilling ? '가져오는 중...' : '커밋에서 가져오기'}
-          </button>
-        </div>
-        {backfillResult && (
-          <div className={`mt-3 p-3 rounded-lg text-sm ${
-            backfillResult.success
-              ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-              : 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
-          }`}>
-            {backfillResult.success
-              ? `${backfillResult.count}건의 제출 기록을 가져왔습니다.`
-              : backfillResult.error}
-          </div>
-        )}
-      </section>
-
       {/* 일일 현황 */}
       <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -521,9 +453,10 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const d = new Date(statusDate + 'T00:00:00');
+                const d = new Date(statusDate + 'T12:00:00');
                 d.setDate(d.getDate() - 1);
-                setStatusDate(d.toISOString().split('T')[0]);
+                const prev = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                setStatusDate(prev);
               }}
               disabled={!earliestDate || statusDate <= earliestDate}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -542,9 +475,9 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => {
-                const d = new Date(statusDate + 'T00:00:00');
+                const d = new Date(statusDate + 'T12:00:00');
                 d.setDate(d.getDate() + 1);
-                const next = d.toISOString().split('T')[0];
+                const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 if (next <= today) setStatusDate(next);
               }}
               disabled={isStatusToday}

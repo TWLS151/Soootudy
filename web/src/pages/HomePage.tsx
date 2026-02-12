@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { X, ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2, Lock } from 'lucide-react';
+import { ExternalLink, Sparkles, Upload, BookOpen, ChevronRight, Flame, Code2, Lock } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import MemberCard from '../components/MemberCard';
 import StatsChart from '../components/StatsChart';
@@ -117,10 +117,6 @@ export default function HomePage() {
   // 일일 진행 상황
   const { config } = useStudyConfig();
   const { commentCount, loading: progressLoading } = useDailyProgress(githubUsername, currentMemberId);
-  const [bannerClosed, setBannerClosed] = useState(() => {
-    return sessionStorage.getItem('betaBannerClosed') === 'true';
-  });
-
   const [dailyProblems, setDailyProblems] = useState<DailyProblem[]>([]);
   const [pastProblems, setPastProblems] = useState<DailyProblem[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
@@ -166,11 +162,6 @@ export default function HomePage() {
   }, [allComplete]);
 
   const recentProblems = problems.slice(0, 8);
-
-  const closeBanner = () => {
-    setBannerClosed(true);
-    sessionStorage.setItem('betaBannerClosed', 'true');
-  };
 
   // 제출자 버전 토글 바깥 클릭 닫기
   useEffect(() => {
@@ -279,27 +270,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      {/* 베타 피드백 배너 */}
-      {!bannerClosed && (
-        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
-          <span className="text-2xl">🚧</span>
-          <div className="flex-1 text-sm">
-            <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-              베타 버전 운영 중 (2/5 - 2/12)
-            </p>
-            <p className="text-blue-700 dark:text-blue-300">
-              웹사이트에서 이상한 점이나 추가했으면 하는 기능이 있다면 장수철에게 알려주세요!
-            </p>
-          </div>
-          <button
-            onClick={closeBanner}
-            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 transition-colors"
-            aria-label="배너 닫기"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+
 
       {/* Hero */}
       <div className="text-center py-8">

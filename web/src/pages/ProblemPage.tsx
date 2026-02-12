@@ -8,7 +8,7 @@ import CodeCommentPanel from '../components/CodeCommentPanel';
 import ReactionBar from '../components/ReactionBar';
 import { useCodeComments } from '../hooks/useCodeComments';
 import { useCodeBookmarks, useBookmarkCount } from '../hooks/useCodeBookmarks';
-import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, Circle, Copy, Star, Sparkles, Lock } from 'lucide-react';
+import { ExternalLink, Users, Pencil, Trash2, MoreVertical, GitCompare, X, ChevronDown, Circle, Star, Sparkles, Lock } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { fetchFileContent, parseSourceFromCode, getProblemUrl } from '../services/github';
 import { supabase } from '../lib/supabase';
@@ -56,9 +56,7 @@ export default function ProblemPage() {
   const [clickedOnDot, setClickedOnDot] = useState(false);
   const hasAutoOpenedPanel = useRef(false);
   const hasAutoOpenedPreview = useRef(false);
-  const [showCopyTip, setShowCopyTip] = useState(() => {
-    return localStorage.getItem('copyTipDismissed') !== 'true';
-  });
+
 
   // 키보드 네비게이션 상태
   const [keyboardMode, setKeyboardMode] = useState<'none' | 'comment-nav' | 'member-nav'>('member-nav');
@@ -865,26 +863,6 @@ export default function ProblemPage() {
                     }`}
                   >
                     노트
-                  </button>
-                </div>
-              )}
-
-              {/* 복사 기능 안내 (1회) */}
-              {showCopyTip && !loading && activeTab === 'code' && code && (
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 text-sm">
-                  <Copy className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <p className="flex-1 text-indigo-700 dark:text-indigo-300">
-                    코드 상단에 <strong>복사</strong> / <strong>코드+댓글</strong> 버튼이 추가되었습니다!
-                  </p>
-                  <button
-                    onClick={() => {
-                      setShowCopyTip(false);
-                      localStorage.setItem('copyTipDismissed', 'true');
-                    }}
-                    className="p-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-400 dark:text-indigo-500 transition-colors shrink-0"
-                    aria-label="닫기"
-                  >
-                    <X className="w-4 h-4" />
                   </button>
                 </div>
               )}
