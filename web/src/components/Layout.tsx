@@ -17,11 +17,12 @@ interface LayoutProps {
   dark: boolean;
   toggleTheme: () => void;
   addProblem: (problem: Problem) => void;
+  removeProblem: (problemId: string) => void;
   user: User;
   onLogout: () => void;
 }
 
-export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem, user, onLogout }: LayoutProps) {
+export default function Layout({ members, problems, weeks, activities, dark, toggleTheme, addProblem, removeProblem, user, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(user?.id ?? null);
@@ -111,7 +112,7 @@ export default function Layout({ members, problems, weeks, activities, dark, tog
       {/* 메인 콘텐츠 */}
       <main className="pt-16">
         <div className="p-6 max-w-5xl mx-auto">
-          <Outlet context={{ members, problems, weeks, activities, dark, addProblem, user }} />
+          <Outlet context={{ members, problems, weeks, activities, dark, addProblem, removeProblem, user }} />
         </div>
       </main>
     </div>

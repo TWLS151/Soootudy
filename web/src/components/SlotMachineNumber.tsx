@@ -1,16 +1,18 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Flame } from 'lucide-react';
+import { Flame, FileCode2 } from 'lucide-react';
 
 interface SlotMachineNumberProps {
   from: number;
   to: number;
   duration?: number;
+  label?: string;
+  variant?: 'streak' | 'count';
 }
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const DIGIT_HEIGHT = 48; // px per digit cell
 
-function SlotDigit({ from, to, delay }: { from: number; to: number; delay: number }) {
+function SlotDigit({ from, to, delay, colorClass }: { from: number; to: number; delay: number; colorClass: string }) {
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ function SlotDigit({ from, to, delay }: { from: number; to: number; delay: numbe
         {strip.map((digit, i) => (
           <div
             key={i}
-            className="flex items-center justify-center font-bold text-3xl text-orange-500 dark:text-orange-400"
+            className={`flex items-center justify-center font-bold text-3xl ${colorClass}`}
             style={{ height: DIGIT_HEIGHT }}
           >
             {digit}
@@ -63,7 +65,36 @@ function SlotDigit({ from, to, delay }: { from: number; to: number; delay: numbe
   );
 }
 
-export default function SlotMachineNumber({ from, to, duration = 1500 }: SlotMachineNumberProps) {
+export default function SlotMachineNumber({ from, to, duration = 1500, label, variant = 'streak' }: SlotMachineNumberProps) {
+  const shouldAnimate = from !== to;
+
+  const isStreak = variant === 'streak';
+  const displayLabel = label || (isStreak ? '일 연속' : '개 제출');
+  const colorClass = isStreak ? 'text-orange-500 dark:text-orange-400' : 'text-indigo-500 dark:text-indigo-400';
+
+  const icon = isStreak ? (
+    <Flame
+      className={`w-7 h-7 ${colorClass}`}
+      style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+    />
+  ) : (
+    <FileCode2 className={`w-6 h-6 ${colorClass}`} />
+  );
+
+  // Static display: from === to → no animation
+  if (!shouldAnimate) {
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {icon}
+        <span className={`text-3xl font-bold ${colorClass}`}>{to}</span>
+        <span className="text-lg font-bold text-slate-700 dark:text-slate-300">
+          {displayLabel}
+        </span>
+        {isStreak && icon}
+      </div>
+    );
+  }
+
   // Split numbers into digit arrays (padded to same length)
   const toStr = String(to);
   const fromStr = String(from).padStart(toStr.length, '0');
@@ -81,19 +112,15 @@ export default function SlotMachineNumber({ from, to, duration = 1500 }: SlotMac
 
   return (
     <div className="flex items-center justify-center gap-2">
-      <Flame
-        className="w-7 h-7 text-orange-500 dark:text-orange-400"
-        style={{
-          animation: 'pulse 1.5s ease-in-out infinite',
-        }}
-      />
+      {icon}
       <div className="flex">
         {digits.map((d, i) => (
           <SlotDigit
             key={i}
             from={d.from}
             to={d.to}
-            delay={i * 150} // Stagger: leftmost digit starts first
+            delay={i * 150}
+            colorClass={colorClass}
           />
         ))}
       </div>
@@ -101,14 +128,9 @@ export default function SlotMachineNumber({ from, to, duration = 1500 }: SlotMac
         className="text-lg font-bold text-slate-700 dark:text-slate-300 transition-opacity duration-500"
         style={{ opacity: showLabel ? 1 : 0 }}
       >
-        일 연속
+        {displayLabel}
       </span>
-      <Flame
-        className="w-7 h-7 text-orange-500 dark:text-orange-400"
-        style={{
-          animation: 'pulse 1.5s ease-in-out infinite',
-        }}
-      />
+      {isStreak && icon}
     </div>
   );
 }

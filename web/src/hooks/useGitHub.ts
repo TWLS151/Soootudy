@@ -12,6 +12,7 @@ interface UseGitHubResult {
   loading: boolean;
   error: string | null;
   addProblem: (problem: Problem) => void;
+  removeProblem: (problemId: string) => void;
 }
 
 export function useGitHub(): UseGitHubResult {
@@ -84,5 +85,9 @@ export function useGitHub(): UseGitHubResult {
     });
   }, []);
 
-  return { members, problems, weeks, activities, loading, error, addProblem };
+  const removeProblem = useCallback((problemId: string) => {
+    setProblems((prev) => prev.filter((p) => p.id !== problemId));
+  }, []);
+
+  return { members, problems, weeks, activities, loading, error, addProblem, removeProblem };
 }

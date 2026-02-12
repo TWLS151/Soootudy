@@ -100,6 +100,7 @@ export default function SubmitPage() {
   const [cheerMessage] = useState(() => CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)]);
   const confettiFired = useRef(false);
   const preSubmitStreakRef = useRef(0);
+  const preSubmitCodeCountRef = useRef(0);
   const [editorHeight, setEditorHeight] = useState(300);
   const [newlyUnlocked, setNewlyUnlocked] = useState<CharacterDef[]>([]);
 
@@ -195,6 +196,7 @@ export default function SubmitPage() {
     setError(null);
     setSubmitting(true);
     preSubmitStreakRef.current = memberId ? (activities[memberId]?.streak ?? 0) : 0;
+    preSubmitCodeCountRef.current = memberId ? allProblems.filter((p) => p.member === memberId).length : 0;
 
     try {
       const {
@@ -265,6 +267,8 @@ export default function SubmitPage() {
   // 스트릭 (성공 화면용 — addProblem 낙관적 업데이트 후 activities에서 바로 반영)
   const oldStreak = preSubmitStreakRef.current;
   const newStreak = memberId ? (activities[memberId]?.streak ?? 0) : 0;
+  const oldCodeCount = preSubmitCodeCountRef.current;
+  const newCodeCount = memberId ? allProblems.filter((p) => p.member === memberId).length : 0;
 
   // 성공 화면
   if (successData) {
@@ -281,9 +285,14 @@ export default function SubmitPage() {
             GitHub에 코드가 성공적으로 올라갔어요
           </p>
         </div>
-        {newStreak > 0 && (
-          <SlotMachineNumber from={oldStreak} to={newStreak} />
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
+          {newStreak > 0 && (
+            <SlotMachineNumber from={oldStreak} to={newStreak} variant="streak" />
+          )}
+          {newCodeCount > 0 && (
+            <SlotMachineNumber from={oldCodeCount} to={newCodeCount} variant="count" />
+          )}
+        </div>
         <Link
           to={`/problem/${successData.memberId}/${successData.week}/${successData.name}`}
           className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"

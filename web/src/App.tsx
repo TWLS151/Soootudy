@@ -20,7 +20,7 @@ import NotFoundPage from './pages/NotFoundPage';
 export default function App() {
   const { dark, toggle } = useTheme();
   const auth = useAuth();
-  const { members, problems, weeks, activities, loading, error, addProblem } = useGitHub();
+  const { members, problems, weeks, activities, loading, error, addProblem, removeProblem } = useGitHub();
 
   // 팀원 확인 로직
   useEffect(() => {
@@ -84,6 +84,7 @@ export default function App() {
               dark={dark}
               toggleTheme={toggle}
               addProblem={addProblem}
+              removeProblem={removeProblem}
               user={auth.user!}
               onLogout={auth.logout}
             />

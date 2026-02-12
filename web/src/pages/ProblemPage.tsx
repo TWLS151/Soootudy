@@ -19,11 +19,12 @@ interface Context {
   members: Members;
   problems: Problem[];
   dark: boolean;
+  removeProblem: (problemId: string) => void;
 }
 
 export default function ProblemPage() {
   const { memberId, week, problemName } = useParams<{ memberId: string; week: string; problemName: string }>();
-  const { members, problems, dark } = useOutletContext<Context>();
+  const { members, problems, dark, removeProblem } = useOutletContext<Context>();
   const navigate = useNavigate();
 
   const [code, setCode] = useState<string | null>(null);
@@ -188,8 +189,14 @@ export default function ProblemPage() {
       try {
         sessionStorage.removeItem('sootudy_tree');
         sessionStorage.removeItem('sootudy_activity');
+        sessionStorage.removeItem(`sootudy_file_${problem.path}`);
+        if (problem.notePath) {
+          sessionStorage.removeItem(`sootudy_file_${problem.notePath}`);
+        }
       } catch { /* ignore */ }
 
+      // Optimistic removal: 상태에서 즉시 제거
+      removeProblem(problem.id);
       navigate(`/member/${memberId}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : '삭제에 실패했습니다.');
