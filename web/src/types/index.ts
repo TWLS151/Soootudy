@@ -86,6 +86,7 @@ export interface DailyProblem {
   problem_title: string;
   problem_url: string | null;
   exam_type: ExamType | null;
+  sort_order: number;
   created_by: string;
   created_at: string;
   updated_at: string;

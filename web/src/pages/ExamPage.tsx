@@ -67,6 +67,7 @@ export default function ExamPage() {
         .from('daily_problem')
         .select('*')
         .is('date', null)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (error) throw error;

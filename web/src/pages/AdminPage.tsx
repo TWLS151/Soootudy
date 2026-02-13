@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen, DatabaseZap } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen, DatabaseZap, Pencil, ArrowUp, ArrowDown } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
@@ -85,6 +85,12 @@ export default function AdminPage() {
   const [examType, setExamType] = useState<'IM' | 'A'>('IM');
   const [examSubmitting, setExamSubmitting] = useState(false);
   const [examDeleteId, setExamDeleteId] = useState<string | null>(null);
+  const [editingExam, setEditingExam] = useState<DailyProblem | null>(null);
+  const [editExamSource, setEditExamSource] = useState<Source>('swea');
+  const [editExamNumber, setEditExamNumber] = useState('');
+  const [editExamTitle, setEditExamTitle] = useState('');
+  const [editExamUrl, setEditExamUrl] = useState('');
+  const [editExamType, setEditExamType] = useState<'IM' | 'A'>('IM');
 
   // Backfill
   const [backfilling, setBackfilling] = useState(false);
@@ -113,13 +119,14 @@ export default function AdminPage() {
     }
   }, [isAdmin]);
 
-  // --- 시험 문제 로드/추가/삭제 (임시) ---
+  // --- 시험 문제 로드/추가/삭제/수정/정렬 (임시) ---
   async function loadExamProblems() {
     try {
       const { data, error } = await supabase
         .from('daily_problem')
         .select('*')
         .is('date', null)
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -135,12 +142,17 @@ export default function AdminPage() {
 
     setExamSubmitting(true);
     try {
+      const maxOrder = examProblems.length > 0
+        ? Math.max(...examProblems.map((p) => p.sort_order ?? 0))
+        : 0;
+
       const insertData: Record<string, unknown> = {
         date: null,
         source: examSource,
         problem_number: examNumber.trim(),
         problem_title: examTitle.trim(),
         exam_type: examType,
+        sort_order: maxOrder + 1,
         created_by: user.id,
       };
       if (examUrl.trim()) {
@@ -177,6 +189,72 @@ export default function AdminPage() {
     } else {
       setExamDeleteId(id);
       setTimeout(() => setExamDeleteId((prev) => (prev === id ? null : prev)), 3000);
+    }
+  }
+
+  function startEditExam(problem: DailyProblem) {
+    setEditingExam(problem);
+    setEditExamSource(problem.source);
+    setEditExamNumber(problem.problem_number);
+    setEditExamTitle(problem.problem_title);
+    setEditExamUrl(problem.problem_url || '');
+    setEditExamType(problem.exam_type || 'IM');
+    setShowExamForm(false);
+  }
+
+  async function handleExamEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingExam || !editExamNumber.trim() || !editExamTitle.trim() || examSubmitting) return;
+
+    setExamSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('daily_problem')
+        .update({
+          source: editExamSource,
+          problem_number: editExamNumber.trim(),
+          problem_title: editExamTitle.trim(),
+          problem_url: editExamUrl.trim() || null,
+          exam_type: editExamType,
+        })
+        .eq('id', editingExam.id);
+
+      if (error) throw error;
+      setEditingExam(null);
+      await loadExamProblems();
+    } catch (error) {
+      console.error('Failed to update exam problem:', error);
+      alert('수정에 실패했습니다.');
+    } finally {
+      setExamSubmitting(false);
+    }
+  }
+
+  async function handleExamMove(index: number, direction: 'up' | 'down') {
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= examProblems.length) return;
+
+    const a = examProblems[index];
+    const b = examProblems[swapIndex];
+
+    // Optimistic update
+    setExamProblems((prev) => {
+      const next = [...prev];
+      next[index] = b;
+      next[swapIndex] = a;
+      return next;
+    });
+
+    try {
+      const [res1, res2] = await Promise.all([
+        supabase.from('daily_problem').update({ sort_order: b.sort_order }).eq('id', a.id),
+        supabase.from('daily_problem').update({ sort_order: a.sort_order }).eq('id', b.id),
+      ]);
+      if (res1.error) throw res1.error;
+      if (res2.error) throw res2.error;
+    } catch (error) {
+      console.error('Failed to reorder:', error);
+      await loadExamProblems(); // rollback
     }
   }
   // --- 시험 문제 끝 ---
@@ -935,13 +1013,32 @@ export default function AdminPage() {
         </div>
 
         {/* 문제 목록 */}
-        {examProblems.length > 0 && (
+        {examProblems.length > 0 && !editingExam && (
           <div className="space-y-2 mb-4">
-            {examProblems.map((problem) => (
+            {examProblems.map((problem, index) => (
               <div
                 key={problem.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900"
+                className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900"
               >
+                {/* 순서 조절 */}
+                <div className="flex flex-col gap-0.5 shrink-0">
+                  <button
+                    onClick={() => handleExamMove(index, 'up')}
+                    disabled={index === 0}
+                    className="p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    title="위로"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleExamMove(index, 'down')}
+                    disabled={index === examProblems.length - 1}
+                    className="p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    title="아래로"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <SourceBadge source={problem.source} />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate block">
@@ -961,6 +1058,13 @@ export default function AdminPage() {
                   </span>
                 )}
                 <button
+                  onClick={() => startEditExam(problem)}
+                  className="p-1.5 rounded-lg transition-colors shrink-0 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400"
+                  title="수정"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleExamDelete(problem.id)}
                   className={`p-1.5 rounded-lg transition-colors shrink-0 ${
                     examDeleteId === problem.id
@@ -976,14 +1080,114 @@ export default function AdminPage() {
           </div>
         )}
 
-        {examProblems.length === 0 && !showExamForm && (
+        {examProblems.length === 0 && !showExamForm && !editingExam && (
           <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-2 mb-4">
             등록된 시험 대비 문제가 없습니다.
           </p>
         )}
 
+        {/* 수정 폼 */}
+        {editingExam && (
+          <form onSubmit={handleExamEdit} className="space-y-4 border-t border-amber-200 dark:border-amber-800 pt-4 mb-4">
+            <p className="text-sm font-medium text-amber-600 dark:text-amber-400">문제 수정</p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">시험 유형</label>
+              <div className="flex gap-2">
+                {(['IM', 'A'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setEditExamType(t)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      editExamType === t
+                        ? t === 'A' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {t}형
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">출처</label>
+              <div className="flex gap-2">
+                {(['swea', 'boj', 'etc'] as Source[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => { setEditExamSource(s); setEditExamNumber(''); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      editExamSource === s
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {s === 'swea' ? 'SWEA' : s === 'boj' ? 'BOJ' : '기타'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {editExamSource === 'etc' ? '문제 이름' : '문제 번호'}
+              </label>
+              <input
+                type="text"
+                value={editExamNumber}
+                onChange={(e) => {
+                  if (editExamSource === 'etc') {
+                    setEditExamNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
+                  } else {
+                    setEditExamNumber(e.target.value.replace(/\D/g, ''));
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">문제 제목</label>
+              <input
+                type="text"
+                value={editExamTitle}
+                onChange={(e) => setEditExamTitle(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                문제 URL <span className="text-slate-400 font-normal">(선택)</span>
+              </label>
+              <input
+                type="url"
+                value={editExamUrl}
+                onChange={(e) => setEditExamUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={examSubmitting || !editExamNumber.trim() || !editExamTitle.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                {examSubmitting ? '저장 중...' : '저장'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingExam(null)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </form>
+        )}
+
         {/* 추가 폼 */}
-        {showExamForm && (
+        {showExamForm && !editingExam && (
           <form onSubmit={handleExamAdd} className="space-y-4 border-t border-amber-200 dark:border-amber-800 pt-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">시험 유형</label>
