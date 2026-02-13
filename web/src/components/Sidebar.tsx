@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, BookOpen } from 'lucide-react';
 import { sortedMemberEntries } from '../services/github';
 import { getRealMembers } from '../lib/reference';
 import type { Members } from '../types';
@@ -98,6 +98,23 @@ export default function Sidebar({ members, weeks, open, collapsed, onClose, onNa
             주차
           </button>
         </div>
+
+        {/* --- 시험 대비 링크 (임시) --- */}
+        <div className="px-4 pt-3">
+          <Link
+            to="/exam"
+            onClick={onNavigate}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive('/exam')
+                ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            시험 대비
+          </Link>
+        </div>
+        {/* --- 시험 대비 링크 끝 --- */}
 
         <div className="p-4">
           {/* 팀원 탭 */}

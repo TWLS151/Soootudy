@@ -46,19 +46,19 @@ export default function DailyHistoryPage() {
   }
 
   // 날짜별로 그룹핑
-  const groupedByDate: GroupedProblems[] = allProblems.reduce<GroupedProblems[]>((acc, problem) => {
+  const groupedByDate: GroupedProblems[] = allProblems.filter((p) => p.date).reduce<GroupedProblems[]>((acc, problem) => {
     const existing = acc.find((g) => g.date === problem.date);
     if (existing) {
       existing.problems.push(problem);
     } else {
-      const date = new Date(problem.date + 'T00:00:00');
+      const date = new Date(problem.date! + 'T00:00:00');
       const label = date.toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         weekday: 'short',
       });
-      acc.push({ date: problem.date, label, problems: [problem] });
+      acc.push({ date: problem.date!, label, problems: [problem] });
     }
     return acc;
   }, []);

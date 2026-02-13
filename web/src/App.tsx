@@ -15,6 +15,7 @@ import LabPage from './pages/LabPage';
 import SubmitPage from './pages/SubmitPage';
 import DailyHistoryPage from './pages/DailyHistoryPage';
 import AdminPage from './pages/AdminPage';
+import ExamPage from './pages/ExamPage'; // --- 시험 대비 (임시) ---
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="submit" element={<SubmitPage />} />
           <Route path="daily-history" element={<DailyHistoryPage />} />
           <Route path="admin" element={<AdminPage />} />
+          <Route path="exam" element={<ExamPage />} /> {/* --- 시험 대비 (임시) --- */}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

@@ -78,7 +78,7 @@ export interface Comment {
 
 export interface DailyProblem {
   id: string;
-  date: string;
+  date: string | null;
   source: 'swea' | 'boj' | 'etc';
   problem_number: string;
   problem_title: string;

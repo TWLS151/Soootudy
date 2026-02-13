@@ -75,6 +75,16 @@ export default function AdminPage() {
   const [formTitle, setFormTitle] = useState('');
   const [formUrl, setFormUrl] = useState('');
 
+  // --- 시험 대비 (임시) ---
+  const [examProblems, setExamProblems] = useState<DailyProblem[]>([]);
+  const [showExamForm, setShowExamForm] = useState(false);
+  const [examSource, setExamSource] = useState<Source>('swea');
+  const [examNumber, setExamNumber] = useState('');
+  const [examTitle, setExamTitle] = useState('');
+  const [examUrl, setExamUrl] = useState('');
+  const [examSubmitting, setExamSubmitting] = useState(false);
+  const [examDeleteId, setExamDeleteId] = useState<string | null>(null);
+
   // Backfill
   const [backfilling, setBackfilling] = useState(false);
   const [backfillResult, setBackfillResult] = useState<{ deleted: number; unique: number } | null>(null);
@@ -96,14 +106,85 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    if (isAdmin) loadAllProblems();
+    if (isAdmin) {
+      loadAllProblems();
+      loadExamProblems();
+    }
   }, [isAdmin]);
+
+  // --- 시험 문제 로드/추가/삭제 (임시) ---
+  async function loadExamProblems() {
+    try {
+      const { data, error } = await supabase
+        .from('daily_problem')
+        .select('*')
+        .is('date', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setExamProblems(data || []);
+    } catch (error) {
+      console.error('Failed to load exam problems:', error);
+    }
+  }
+
+  async function handleExamAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!examNumber.trim() || !examTitle.trim() || examSubmitting) return;
+
+    setExamSubmitting(true);
+    try {
+      const insertData: Record<string, unknown> = {
+        date: null,
+        source: examSource,
+        problem_number: examNumber.trim(),
+        problem_title: examTitle.trim(),
+        created_by: user.id,
+      };
+      if (examUrl.trim()) {
+        insertData.problem_url = examUrl.trim();
+      }
+
+      const { error } = await supabase.from('daily_problem').insert(insertData);
+      if (error) throw error;
+
+      setExamNumber('');
+      setExamTitle('');
+      setExamUrl('');
+      setShowExamForm(false);
+      await loadExamProblems();
+    } catch (error) {
+      console.error('Failed to add exam problem:', error);
+      alert('문제 추가에 실패했습니다.');
+    } finally {
+      setExamSubmitting(false);
+    }
+  }
+
+  async function handleExamDelete(id: string) {
+    if (examDeleteId === id) {
+      try {
+        const { error } = await supabase.from('daily_problem').delete().eq('id', id);
+        if (error) throw error;
+        setExamProblems((prev) => prev.filter((p) => p.id !== id));
+      } catch (error) {
+        console.error('Failed to delete exam problem:', error);
+        alert('삭제에 실패했습니다.');
+      }
+      setExamDeleteId(null);
+    } else {
+      setExamDeleteId(id);
+      setTimeout(() => setExamDeleteId((prev) => (prev === id ? null : prev)), 3000);
+    }
+  }
+  // --- 시험 문제 끝 ---
 
   async function loadAllProblems() {
     try {
       const { data, error } = await supabase
         .from('daily_problem')
         .select('*')
+        .not('date', 'is', null)
         .order('date', { ascending: true })
         .order('created_at', { ascending: true });
 
@@ -246,6 +327,7 @@ export default function AdminPage() {
   const problemsByDate = useMemo(() => {
     const map = new Map<string, DailyProblem[]>();
     for (const p of allProblems) {
+      if (!p.date) continue;
       const existing = map.get(p.date);
       if (existing) existing.push(p);
       else map.set(p.date, [p]);
@@ -254,7 +336,7 @@ export default function AdminPage() {
   }, [allProblems]);
 
   const futureProblems = useMemo(
-    () => allProblems.filter((p) => p.date > today),
+    () => allProblems.filter((p) => p.date && p.date > today),
     [allProblems, today]
   );
 
@@ -264,7 +346,7 @@ export default function AdminPage() {
   );
 
   const pastProblems = useMemo(
-    () => allProblems.filter((p) => p.date < today).reverse(),
+    () => allProblems.filter((p) => p.date && p.date < today).reverse(),
     [allProblems, today]
   );
 
@@ -830,6 +912,148 @@ export default function AdminPage() {
           <span className="text-sm font-medium">문제 추가</span>
         </button>
       )}
+
+      {/* --- 시험 대비 문제 관리 (임시) --- */}
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-amber-200 dark:border-amber-800 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">시험 대비 문제</h2>
+            <span className="text-xs text-slate-400 dark:text-slate-500">{examProblems.length}개</span>
+          </div>
+          {!showExamForm && (
+            <button
+              onClick={() => setShowExamForm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              추가
+            </button>
+          )}
+        </div>
+
+        {/* 문제 목록 */}
+        {examProblems.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {examProblems.map((problem) => (
+              <div
+                key={problem.id}
+                className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900"
+              >
+                <SourceBadge source={problem.source} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate block">
+                    {problem.problem_title}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {problem.source.toUpperCase()} {problem.problem_number}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleExamDelete(problem.id)}
+                  className={`p-1.5 rounded-lg transition-colors shrink-0 ${
+                    examDeleteId === problem.id
+                      ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                      : 'hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400'
+                  }`}
+                  title={examDeleteId === problem.id ? '한번 더 클릭하면 삭제됩니다' : '삭제'}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {examProblems.length === 0 && !showExamForm && (
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-2 mb-4">
+            등록된 시험 대비 문제가 없습니다.
+          </p>
+        )}
+
+        {/* 추가 폼 */}
+        {showExamForm && (
+          <form onSubmit={handleExamAdd} className="space-y-4 border-t border-amber-200 dark:border-amber-800 pt-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">출처</label>
+              <div className="flex gap-2">
+                {(['swea', 'boj', 'etc'] as Source[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => { setExamSource(s); setExamNumber(''); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      examSource === s
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {s === 'swea' ? 'SWEA' : s === 'boj' ? 'BOJ' : '기타'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                {examSource === 'etc' ? '문제 이름' : '문제 번호'}
+              </label>
+              <input
+                type="text"
+                value={examNumber}
+                onChange={(e) => {
+                  if (examSource === 'etc') {
+                    setExamNumber(e.target.value.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9- ]/g, ''));
+                  } else {
+                    setExamNumber(e.target.value.replace(/\D/g, ''));
+                  }
+                }}
+                placeholder={examSource === 'etc' ? '이분탐색연습' : '6001'}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">문제 제목</label>
+              <input
+                type="text"
+                value={examTitle}
+                onChange={(e) => setExamTitle(e.target.value)}
+                placeholder="예) 그래프 탐색, 이분 탐색 연습"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                문제 URL <span className="text-slate-400 font-normal">(선택)</span>
+              </label>
+              <input
+                type="url"
+                value={examUrl}
+                onChange={(e) => setExamUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={examSubmitting || !examNumber.trim() || !examTitle.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {examSubmitting ? '추가 중...' : '추가'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowExamForm(false)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+      {/* --- 시험 대비 끝 --- */}
 
       {/* 참고 솔루션 업로드 */}
       <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
