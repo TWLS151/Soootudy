@@ -1,14 +1,14 @@
 // --- 시험 대비 페이지 (임시 기능, 시험 후 제거 예정) ---
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { ExternalLink, Upload, BookOpen, Sparkles, Lock, Code2 } from 'lucide-react';
+import { ExternalLink, Upload, BookOpen, Sparkles, Lock, Code2, List, BarChart3, Check, X, Filter } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
 import { getProblemUrl } from '../services/github';
 import { hasUserSolvedBaseName } from '../lib/reference';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import type { Members, Problem, DailyProblem } from '../types';
+import type { Members, Problem, DailyProblem, ExamType } from '../types';
 
 interface Context {
   members: Members;
@@ -17,11 +17,16 @@ interface Context {
   dark: boolean;
 }
 
+type Tab = 'problems' | 'status';
+
 export default function ExamPage() {
   const { members, problems, user } = useOutletContext<Context>();
   const [examProblems, setExamProblems] = useState<DailyProblem[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSolver, setExpandedSolver] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('problems');
+  const [examTypeFilter, setExamTypeFilter] = useState<ExamType | 'all'>('all');
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
 
   const githubUsername = user?.user_metadata?.user_name || user?.user_metadata?.preferred_username;
   const currentMemberId = useMemo(() => {
@@ -31,6 +36,15 @@ export default function ExamPage() {
     }
     return null;
   }, [members, githubUsername]);
+
+  const memberIds = useMemo(() => Object.keys(members).filter((id) => id !== '_ref'), [members]);
+
+  // 초기에 전체 멤버 선택
+  useEffect(() => {
+    if (memberIds.length > 0 && selectedMembers.size === 0) {
+      setSelectedMembers(new Set(memberIds));
+    }
+  }, [memberIds]);
 
   useEffect(() => {
     loadExamProblems();
@@ -64,6 +78,49 @@ export default function ExamPage() {
     }
   }
 
+  // 시험 유형 필터 적용
+  const filteredExamProblems = useMemo(
+    () => examTypeFilter === 'all' ? examProblems : examProblems.filter((p) => p.exam_type === examTypeFilter),
+    [examProblems, examTypeFilter]
+  );
+
+  // 풀이현황: 멤버별 문제 풀이 상태 계산
+  const statusData = useMemo(() => {
+    return filteredExamProblems.map((ep) => {
+      const problemNumber = ep.source === 'etc' ? ep.problem_number.replace(/ /g, '_') : ep.problem_number;
+      const problemName = `${ep.source}-${problemNumber}`;
+      const solvedBy = new Set<string>();
+      for (const p of problems) {
+        if ((p.baseName || p.name) === problemName && p.member !== '_ref') {
+          solvedBy.add(p.member);
+        }
+      }
+      return { problem: ep, problemName, solvedBy };
+    });
+  }, [filteredExamProblems, problems]);
+
+  const filteredMemberIds = useMemo(
+    () => memberIds.filter((id) => selectedMembers.has(id)),
+    [memberIds, selectedMembers]
+  );
+
+  function toggleMember(id: string) {
+    setSelectedMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selectedMembers.size === memberIds.length) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(memberIds));
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -77,7 +134,55 @@ export default function ExamPage() {
         </div>
       </div>
 
-      {/* 문제 목록 */}
+      {/* 탭 + 시험 유형 필터 */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTab('problems')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === 'problems'
+                ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <List className="w-4 h-4" />
+            문제보기
+          </button>
+          <button
+            onClick={() => setTab('status')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === 'status'
+                ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            풀이현황
+          </button>
+        </div>
+        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+        <div className="flex gap-1.5">
+          {([['all', '전체'], ['IM', 'IM형'], ['A', 'A형']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setExamTypeFilter(value)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                examTypeFilter === value
+                  ? value === 'A'
+                    ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-700'
+                    : value === 'IM'
+                    ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700'
+                    : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 콘텐츠 */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-24 h-24">
@@ -85,18 +190,19 @@ export default function ExamPage() {
           </div>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 animate-pulse">불러오는 중...</p>
         </div>
-      ) : examProblems.length === 0 ? (
+      ) : filteredExamProblems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-24 h-24">
             <DotLottieReact src="/cat.lottie" loop autoplay />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            등록된 시험 대비 문제가 없습니다.
+            {examProblems.length === 0 ? '등록된 시험 대비 문제가 없습니다.' : '해당 유형의 문제가 없습니다.'}
           </p>
         </div>
-      ) : (
+      ) : tab === 'problems' ? (
+        /* ========== 문제보기 탭 ========== */
         <div className="space-y-3">
-          {examProblems.map((problem) => {
+          {filteredExamProblems.map((problem) => {
             const problemUrl = problem.problem_url || getProblemUrl(problem.problem_number, problem.source);
             const problemNumber = problem.source === 'etc' ? problem.problem_number.replace(/ /g, '_') : problem.problem_number;
             const problemName = `${problem.source}-${problemNumber}`;
@@ -128,6 +234,15 @@ export default function ExamPage() {
                         {problem.source.toUpperCase()} {problem.problem_number}
                       </p>
                     </div>
+                    {problem.exam_type && (
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold shrink-0 ${
+                        problem.exam_type === 'A'
+                          ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+                          : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {problem.exam_type}형
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {problemUrl && (
@@ -241,6 +356,132 @@ export default function ExamPage() {
               </div>
             );
           })}
+        </div>
+      ) : (
+        /* ========== 풀이현황 탭 ========== */
+        <div className="space-y-4">
+          {/* 멤버 필터 */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">팀원 필터</span>
+              <button
+                onClick={toggleAll}
+                className="ml-auto text-xs text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                {selectedMembers.size === memberIds.length ? '전체 해제' : '전체 선택'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {memberIds.map((id) => {
+                const member = members[id];
+                if (!member) return null;
+                const isSelected = selectedMembers.has(id);
+                return (
+                  <button
+                    key={id}
+                    onClick={() => toggleMember(id)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      isSelected
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                    }`}
+                  >
+                    <img
+                      src={`https://github.com/${member.github}.png?size=20`}
+                      alt={member.name}
+                      className={`w-4 h-4 rounded-full ${isSelected ? '' : 'opacity-40'}`}
+                    />
+                    {member.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 풀이현황 테이블 */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 sticky left-0 bg-white dark:bg-slate-900 z-10 min-w-[120px]">
+                    팀원
+                  </th>
+                  {examProblems.map((ep) => (
+                    <th
+                      key={ep.id}
+                      className="px-3 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 min-w-[80px]"
+                    >
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{ep.source}</span>
+                        <span className="truncate max-w-[80px]" title={ep.problem_title}>
+                          {ep.problem_title}
+                        </span>
+                      </div>
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 min-w-[60px]">
+                    합계
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMemberIds.map((memberId) => {
+                  const member = members[memberId];
+                  if (!member) return null;
+                  let solvedCount = 0;
+
+                  return (
+                    <tr key={memberId} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
+                      <td className="px-4 py-3 sticky left-0 bg-white dark:bg-slate-900 z-10">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={`https://github.com/${member.github}.png?size=24`}
+                            alt={member.name}
+                            className="w-5 h-5 rounded-full"
+                          />
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{member.name}</span>
+                        </div>
+                      </td>
+                      {statusData.map(({ problem, solvedBy }) => {
+                        const solved = solvedBy.has(memberId);
+                        if (solved) solvedCount++;
+                        return (
+                          <td key={problem.id} className="px-3 py-3 text-center">
+                            {solved ? (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40">
+                                <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800">
+                                <X className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-bold ${
+                          solvedCount === filteredExamProblems.length
+                            ? 'text-green-600 dark:text-green-400'
+                            : solvedCount > 0
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-slate-400 dark:text-slate-500'
+                        }`}>
+                          {solvedCount}/{filteredExamProblems.length}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredMemberIds.length === 0 && (
+              <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
+                선택된 팀원이 없습니다.
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

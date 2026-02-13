@@ -76,6 +76,8 @@ export interface Comment {
   parent_id?: string | null;
 }
 
+export type ExamType = 'IM' | 'A';
+
 export interface DailyProblem {
   id: string;
   date: string | null;
@@ -83,6 +85,7 @@ export interface DailyProblem {
   problem_number: string;
   problem_title: string;
   problem_url: string | null;
+  exam_type: ExamType | null;
   created_by: string;
   created_at: string;
   updated_at: string;

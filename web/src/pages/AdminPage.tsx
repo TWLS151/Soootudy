@@ -82,6 +82,7 @@ export default function AdminPage() {
   const [examNumber, setExamNumber] = useState('');
   const [examTitle, setExamTitle] = useState('');
   const [examUrl, setExamUrl] = useState('');
+  const [examType, setExamType] = useState<'IM' | 'A'>('IM');
   const [examSubmitting, setExamSubmitting] = useState(false);
   const [examDeleteId, setExamDeleteId] = useState<string | null>(null);
 
@@ -139,6 +140,7 @@ export default function AdminPage() {
         source: examSource,
         problem_number: examNumber.trim(),
         problem_title: examTitle.trim(),
+        exam_type: examType,
         created_by: user.id,
       };
       if (examUrl.trim()) {
@@ -949,6 +951,15 @@ export default function AdminPage() {
                     {problem.source.toUpperCase()} {problem.problem_number}
                   </span>
                 </div>
+                {problem.exam_type && (
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold shrink-0 ${
+                    problem.exam_type === 'A'
+                      ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+                      : 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                  }`}>
+                    {problem.exam_type}형
+                  </span>
+                )}
                 <button
                   onClick={() => handleExamDelete(problem.id)}
                   className={`p-1.5 rounded-lg transition-colors shrink-0 ${
@@ -974,6 +985,25 @@ export default function AdminPage() {
         {/* 추가 폼 */}
         {showExamForm && (
           <form onSubmit={handleExamAdd} className="space-y-4 border-t border-amber-200 dark:border-amber-800 pt-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">시험 유형</label>
+              <div className="flex gap-2">
+                {(['IM', 'A'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setExamType(t)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      examType === t
+                        ? t === 'A' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {t}형
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">출처</label>
               <div className="flex gap-2">
