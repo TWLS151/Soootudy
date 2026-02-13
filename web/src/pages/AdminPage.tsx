@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen } from 'lucide-react';
+import { Shield, Plus, Trash2, Calendar, Sparkles, ChevronLeft, ChevronRight, Settings, Users, CheckCircle2, MessageSquare, Code2, BookOpen, DatabaseZap } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import SourceBadge from '../components/SourceBadge';
@@ -74,6 +74,11 @@ export default function AdminPage() {
   const [formNumber, setFormNumber] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formUrl, setFormUrl] = useState('');
+
+  // Backfill
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ deleted: number; unique: number } | null>(null);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
 
   // Reference solution form
   const [showRefForm, setShowRefForm] = useState(false);
@@ -203,6 +208,35 @@ export default function AdminPage() {
       setRefError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
     } finally {
       setRefSubmitting(false);
+    }
+  }
+
+  async function handleBackfill() {
+    if (backfilling) return;
+    setBackfilling(true);
+    setBackfillResult(null);
+    setBackfillError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('로그인이 필요합니다.');
+
+      const res = await fetch('/api/backfill-submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '동기화에 실패했습니다.');
+
+      setBackfillResult({ deleted: data.deleted, unique: data.unique });
+    } catch (err) {
+      setBackfillError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setBackfilling(false);
     }
   }
 
@@ -913,6 +947,43 @@ export default function AdminPage() {
               </button>
             </div>
           </form>
+        )}
+      </section>
+
+      {/* 데이터 관리 */}
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <DatabaseZap className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">데이터 관리</h2>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              스트릭 데이터 동기화
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Git 커밋 기록을 기반으로 제출 데이터를 재생성합니다.
+            </p>
+          </div>
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:bg-slate-400 dark:disabled:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {backfilling ? '동기화 중...' : '동기화'}
+          </button>
+        </div>
+
+        {backfillResult && (
+          <div className="mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-300">
+            동기화 완료 — 이전 데이터 {backfillResult.deleted}건 삭제, 새 데이터 {backfillResult.unique}건 삽입
+          </div>
+        )}
+        {backfillError && (
+          <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+            {backfillError}
+          </div>
         )}
       </section>
 

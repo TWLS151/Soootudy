@@ -78,7 +78,23 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Fetch all commits (paginated)
+  // --- Step 1: 이전 backfill 데이터만 삭제 (실제 제출 기록은 보존) ---
+  // 이전 backfill은 2026-02-12 01:04:21 UTC 에 일괄 삽입됨.
+  // 해당 시점 ±1분 이내의 레코드를 backfill 데이터로 간주하여 삭제.
+  const { error: deleteError, count: deletedCount } = await supabase
+    .from('submissions')
+    .delete()
+    .gte('created_at', '2026-02-12T01:04:00+00:00')
+    .lte('created_at', '2026-02-12T01:05:00+00:00');
+
+  if (deleteError) {
+    return res.status(500).json({
+      error: '이전 backfill 데이터 삭제 실패',
+      details: deleteError.message,
+    });
+  }
+
+  // --- Step 2: Git 커밋에서 새 제출(Add) 기록만 수집 ---
   const submissions: { member_id: string; date: string }[] = [];
   let page = 1;
   const perPage = 100;
@@ -106,8 +122,8 @@ export default async function handler(req: any, res: any) {
       // Skip non-submission commits
       if (message.includes('참고 솔루션')) continue;
 
-      // Match "Add ... by {name}" or "Update ... by {name}"
-      const match = message.match(/^(?:Add|Update) .+ by (.+)$/m);
+      // "Add" 커밋만 매칭 (Update/수정은 제출 기록에 포함하지 않음)
+      const match = message.match(/^Add .+ by (.+)$/m);
       if (!match) continue;
 
       const name = match[1].trim();
@@ -137,14 +153,14 @@ export default async function handler(req: any, res: any) {
     return true;
   });
 
-  // Upsert into Supabase
+  // --- Step 3: Upsert (실제 제출 기록과 충돌 시 무시) ---
+  let insertedCount = 0;
   if (uniqueSubmissions.length > 0) {
-    // Batch in chunks of 500
     for (let i = 0; i < uniqueSubmissions.length; i += 500) {
       const batch = uniqueSubmissions.slice(i, i + 500);
       const { error: upsertError } = await supabase
         .from('submissions')
-        .upsert(batch, { onConflict: 'member_id,date' });
+        .upsert(batch, { onConflict: 'member_id,date', ignoreDuplicates: true });
 
       if (upsertError) {
         return res.status(500).json({
@@ -152,12 +168,15 @@ export default async function handler(req: any, res: any) {
           details: upsertError.message,
         });
       }
+      insertedCount += batch.length;
     }
   }
 
   return res.status(200).json({
     success: true,
-    count: uniqueSubmissions.length,
+    deleted: deletedCount ?? 0,
+    inserted: insertedCount,
+    unique: uniqueSubmissions.length,
     pages: page,
   });
 }
