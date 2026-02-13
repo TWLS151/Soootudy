@@ -446,7 +446,7 @@ export default function ProblemPage() {
           user={commentData.user}
           members={members}
           authorColorMap={commentData.authorColorMap}
-          initialReplyTo={nearbyComment?.id ?? null}
+          initialReplyTo={showInputOnly ? null : (nearbyComment?.id ?? null)}
           onSubmit={async (content, parentId) => {
             await commentData.addComment(content, lineNumber, parentId, activeCommentColumnRef.current ?? undefined);
           }}
