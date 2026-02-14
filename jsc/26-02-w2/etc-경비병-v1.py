@@ -42,3 +42,7 @@ for tc in range(1, T + 1):
         safe_count += row.count(0)
 
     print(f"#{tc} {safe_count}")
+
+"""
+테스트 중 입니다.
+"""
