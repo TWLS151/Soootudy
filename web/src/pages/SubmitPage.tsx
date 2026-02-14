@@ -235,12 +235,13 @@ export default function SubmitPage() {
         throw new Error(data.error || '제출에 실패했습니다.');
       }
 
-      // 캐시 삭제
+      // 캐시 갱신
       try {
         sessionStorage.removeItem('sootudy_tree');
-        // 편집 모드: 파일 내용 캐시도 삭제 (안 하면 옛날 코드가 보임)
         if (isEditMode && editParts) {
-          sessionStorage.removeItem(`sootudy_file_${editParts.memberId}/${editParts.week}/${editParts.fullName}.py`);
+          // 낙관적 업데이트: 수정된 코드를 캐시에 바로 반영 (GitHub CDN 딜레이 무시)
+          const cacheKey = `sootudy_file_${editParts.memberId}/${editParts.week}/${editParts.fullName}.py`;
+          sessionStorage.setItem(cacheKey, JSON.stringify({ data: code, timestamp: Date.now() }));
         }
       } catch {
         // sessionStorage 사용 불가 시 무시

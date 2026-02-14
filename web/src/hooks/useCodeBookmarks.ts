@@ -103,15 +103,26 @@ export function useCodeBookmarks(userId: string | null) {
           return false; // Removed
         } else {
           // Add bookmark
-          const { error } = await supabase
+          const { data: inserted, error } = await supabase
             .from('code_bookmarks')
             .insert({
               user_id: userId,
               problem_id: problemId,
               memo: null,
-            });
+            })
+            .select()
+            .single();
 
           if (error) throw error;
+
+          // temp ID를 실제 UUID로 교체
+          if (inserted) {
+            setBookmarks((prev) =>
+              prev.map((b) =>
+                b.problem_id === problemId && b.id.startsWith('temp-') ? inserted : b
+              )
+            );
+          }
           return true; // Added
         }
       } catch (error) {

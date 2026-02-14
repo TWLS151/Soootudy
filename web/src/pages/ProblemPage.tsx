@@ -681,7 +681,7 @@ export default function ProblemPage() {
                   const added = await toggleBookmark(problem.id);
                   // 토스트 알림
                   const toast = document.createElement('div');
-                  toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+                  toast.className = 'fixed top-20 inset-x-0 mx-auto w-fit px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
                   toast.style.backgroundColor = added ? '#10b981' : '#6b7280';
                   toast.style.color = 'white';
                   toast.textContent = added ? '⭐ 북마크에 추가되었습니다' : '북마크에서 제거되었습니다';
