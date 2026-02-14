@@ -265,7 +265,7 @@ export default function CodeViewer({
         dotX = containerWidth - 24;
       }
 
-      const maxCardWidth = 380;
+      const maxCardWidth = 340;
       const cardLeft = Math.max(16, Math.min(dotX - 20, containerWidth - maxCardWidth - 16));
       const arrowLeft = Math.max(10, Math.min(dotX - cardLeft, maxCardWidth - 10));
 
@@ -525,7 +525,8 @@ export default function CodeViewer({
               style={{
                 top: cardPosition.top,
                 left: cardPosition.left,
-                maxWidth: 380,
+                width: 340,
+                maxWidth: 340,
               }}
             >
               {/* Speech bubble arrow pointing up to the dot */}
