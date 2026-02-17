@@ -7,7 +7,7 @@ for tc in range(1, T + 1):
 
     blind_spot = 0
 
-    # 전체 공간을 순회하며 초기 빈 공간(0)의 개수 파악 및 경비병 위치 저장
+    # 전체 공간 순회하며 빈 공간(0) 개수 파악 및 경비병 위치 저장
     for r in range(N):
         for c in range(N):
             if space[r][c] == 2:
