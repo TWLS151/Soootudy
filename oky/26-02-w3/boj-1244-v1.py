@@ -10,9 +10,15 @@ students = [list(map(int, input().split())) for _ in range(M)]
 for gender, switch_num in students:
     # 남학생
     if gender == 1:
+        """
         for i in range(1, N // switch_num + 1):
             num = switch_num * i - 1
             switch[num] = 1 - switch[num]
+        
+        # range의 step 인자 활용
+        """
+        for i in range(switch_num - 1, N, switch_num):
+            switch[i] = 1 - switch[i]
         
     # 여학생
     else:
