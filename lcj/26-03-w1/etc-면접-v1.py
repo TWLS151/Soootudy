@@ -17,7 +17,7 @@ for tc in range(1, T+1):
         score = 0                   # 3. 점수 계산
 
         for _ in range(pointer):
-            score += K              # 포인터 수 만큼 점수를 더하고
+            score += K              # K 만큼 점수를 더하고
             score *= 2              # 포인터에 도달했을 때 점수 x 2
             M -= K                  # 맞힌 문제 수에서 K만큼 차감 (잔여 정답 수를 계산하기 위함)
 
